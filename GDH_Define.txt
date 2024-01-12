@@ -1,0 +1,63 @@
+class StaticObject(Enum): 
+	DOOR = 1
+        PEDESTRIAN_TRAFFIC_LIGHT = 2
+        STAIRS = 3
+        ESCALATOR = 4
+        SUBWAY_ENTRANCE = 5
+        AUTOMATIC_DOOR = 6
+        ELEVATOR_DOOR = 7
+        ELEVATOR_BUTTON = 8 
+        SUBWAY_TICKET_GATE_EACH = 9
+        SUBWAY_TICKET_GATE_HANDICAP = 10
+        SUBWAY_TICKET_GATE_ALL = 11
+        SUBWAY_SCREEN_DOOR = 12
+
+class StaticObjectStatus(Enum):
+	OPEN = 1
+	CLOSED = 2
+	SEMI-OPEN = 3	
+	RED = 4
+	GREEN = 5
+	BLANK = 6
+
+class Results():
+	def __init__(self):
+		self.box = None # list of object boxes 
+		self.class = None # list of classes of objects
+		self.status = StaticObjectStatus.BLANK
+
+def initialize_detect_static_object():
+	...
+
+	return True or False
+
+def detect_static_object(hfov, theta):
+	...
+	result1.box = [x, y, w, h]
+	result1.class = StaticObject.DOOR
+	result1.status = StaticObjectStatus.OPEN
+	result2.box = [x2, y2, w2, h2]
+	result2.class = StaticObject.ESCALATOR
+	result2.status = StaticObjectStatus.BLANK
+	...
+	results  = [result1, result2, ... ] 
+
+	return results
+
+def detect_static_object_all():
+	...
+	hfov = 90
+ 	thetas = [0, 90, 180, 270]
+	
+	results_all = []
+	for theta in thetas :  
+		result = detect_static_object(hfov, theta)
+		results = [hfov, theta, result]
+		results_all.append(results)
+	
+	return results_all
+
+def termintate_detect_static_object():
+	...
+	
+	return True or False
