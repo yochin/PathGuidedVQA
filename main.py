@@ -1,16 +1,20 @@
 import os
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+import pdb
+
+from setGP import read_anno, get_gp, split_images
 
 
-# assisted by ChatGPT4
+
+# Assisted by ChatGPT 4
 
 def main():
     # 이미지가 저장된 폴더 경로
     image_path = 'samples/images'
-    anno_path = 'samples/anno_aihub'
+    anno_path1 = 'samples/anno_aihub'
+    anno_path2 = 'samples/anno_toomuch'
 
     # 폴더 내의 모든 파일 목록을 가져옴
     files = os.listdir(image_path)
@@ -23,42 +27,79 @@ def main():
         # 이미지 파일의 전체 경로
         img_path = os.path.join(image_path, img_file)
         # XML 파일의 전체 경로 (파일 이름은 같지만 확장자만 xml로 변경)
-        xml_path = os.path.join(anno_path, os.path.splitext(img_file)[0] + '.xml')
-
+        xml_path1 = os.path.join(anno_path1, os.path.splitext(img_file)[0] + '.xml')
+        xml_path2 = os.path.join(anno_path2, os.path.splitext(img_file)[0] + '.xml')
 
         # 이미지를 열고
         img = Image.open(img_path)
-        fig, ax = plt.subplots(1)
-        ax.imshow(img)
+        # draw = ImageDraw.Draw(img)
+        # font = ImageFont.truetype('arial.ttf', size=40)
 
-        # XML 파일을 파싱하여 Bounding Box 정보를 가져옴
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
-        for obj in root.iter('object'):
-            bbox = obj.find('bndbox')
-            x_min = int(bbox.find('xmin').text)
-            y_min = int(bbox.find('ymin').text)
-            x_max = int(bbox.find('xmax').text)
-            y_max = int(bbox.find('ymax').text)
+        # # XML 파일을 파싱하여 Bounding Box 정보를 가져옴
+        # bboxes1 = read_anno(xml_path1) # list of [label_name, [x_min, y_min, x_max, y_max], score]
+        # bboxes2 = read_anno(xml_path2)
+        # bboxes = bboxes1
+        # bboxes.extend(bboxes2)
 
-            # Bounding Box를 이미지에 그림
-            rect = patches.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min,
-                                    linewidth=1, edgecolor='r', facecolor='none')
-            ax.add_patch(rect)
+        # for label_name, bbox, score in bboxes:
+        #     # Bounding Box를 이미지에 그림
+        #     draw.rectangle(bbox, outline='yellow', width=2)
+        #     draw.text(bbox[:2], label_name, fill='white', font=font)
 
-        # 이미지 및 Bounding Box 표시
-        plt.axis('off')
-        plt.title(img_file)
-        plt.show()
+        # # 이미지 및 Bounding Box 표시
+        # plt.imshow(img)
+        # plt.axis('off')
+        # plt.title(img_file)
+        # plt.show()
 
+
+        # 0. Definition
+        list_goal_names = ['stairs', 'door', 'elevator']
+        whole_width, whole_height = img.size
 
         # 1. Split input images into cropped images along with the goal path (yochin)
+        # 1.1. read annotation and convert into bboxes with label info.
+        # XML 파일을 파싱하여 Bounding Box 정보를 가져옴
+        bboxes1 = read_anno(xml_path1) # list of [label_name, [x_min, y_min, x_max, y_max], score]
+        bboxes2 = read_anno(xml_path2)
+        bboxes = bboxes1
+        bboxes.extend(bboxes2)
+
+        # 1.2. set goal position
+        list_labels_gps = get_gp(bboxes, list_goal_names)  # list of [label_name, [cx, cy]]
+
+        # 1.3. split images into sub-images
+        for goal_label_cxcy in list_labels_gps:
+            goal_label, goal_cxcy = goal_label_cxcy
+            list_boxes_on_path, list_points_on_path, list_cropped_images = split_images(goal_cxcy, whole_width, whole_height, pil_image=img, sub_image_ratio=0.5, num_divisions=1)
+
         
-        # 2. generate answers 1 and 2 using LLM (byungok.han)
+    #     # 2. generate answers 1 and 2 using LLM (byungok.han)
 
-        # 3. merge answers into the final answer (later)
+    #     # 3. merge answers into the final answer (later)
 
 
+            # 4. draw all
+            # draw start, mid, and goal points and boxes
+            img = Image.open(img_path)
+            draw = ImageDraw.Draw(img)
+            font = ImageFont.truetype('arial.ttf', size=40)
+            
+            for mid_point, mid_box in zip(list_points_on_path, list_boxes_on_path):
+                draw.point(mid_point)
+                draw.rectangle(mid_box, outline='red', width=4)
+
+            # draw detection results
+            for label_name, bbox, score in bboxes:
+                # Bounding Box를 이미지에 그림
+                draw.rectangle(bbox, outline='yellow', width=2)
+                draw.text(bbox[:2], label_name, fill='white', font=font)
+
+            # 이미지 및 Bounding Box 표시
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title(img_file + f', goal_label:{goal_label}')
+            plt.show()
 
 
 
