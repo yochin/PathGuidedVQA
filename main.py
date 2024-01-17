@@ -7,6 +7,40 @@ import pdb
 from setGP import read_anno, get_gp, split_images
 
 
+import requests
+import json
+
+
+
+def describe_all_bboxes_with_chatgpt(bboxes):
+    # 모든 장애물 정보를 하나의 문자열로 구성
+    bbox_descriptions = [f"{label} at ({x_min}, {y_min}, {x_max}, {y_max})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
+    bbox_list_str = ", ".join(bbox_descriptions)
+
+    prompt = f"Describe the following obstacles in a natural and detailed way for a visually impaired person: {bbox_list_str}."
+
+    # ChatGPT API 호출
+    response = requests.post(
+        "https://api.openai.com/v1/engines/davinci-codex/completions",
+        headers={
+            "Authorization": f"Bearer YOUR_API_KEY",
+            "Content-Type": "application/json"
+        },
+        data=json.dumps({
+            "prompt": prompt,
+            "max_tokens": 200  # 필요에 따라 조정
+        })
+    )
+
+    # 응답 처리
+    if response.status_code == 200:
+        data = response.json()
+        return data["choices"][0]["text"].strip()
+    else:
+        return f"Error: Unable to describe obstacles. Response Code: {response.status_code}"
+
+
+
 
 # Assisted by ChatGPT 4
 
@@ -75,6 +109,10 @@ def main():
 
         
     #     # 2. generate answers 1 and 2 using LLM (byungok.han)
+    
+            # 결과 문장 생성
+            description = describe_all_bboxes_with_chatgpt(bboxes_example)
+            print(description)    
 
     #     # 3. merge answers into the final answer (later)
 
