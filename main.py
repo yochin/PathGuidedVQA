@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pdb
 import os
 import openai
+import base64
 
 from setGP import read_anno, get_gp, split_images
 
@@ -12,29 +13,52 @@ OPENAI_API_KEY = "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"
 
 # Assisted by ChatGPT 4
 
-def describe_all_bboxes_with_chatgpt(bboxes):
+
+def encode_image_to_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+
+
+def describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy):
+    # 이미지를 base64로 인코딩
+    encoded_image = encode_image_to_base64(image_path)
+
     # 각 바운딩 박스에 대한 설명 구성
     bbox_descriptions = [f"{label} at ({x_min}, {y_min}, {x_max}, {y_max})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
     bbox_list_str = ", ".join(bbox_descriptions)
+    goal_label, goal_cxcy = goal_label_cxcy
+    dest_descriptions = f"{goal_label} at ({goal_cxcy[0]}, {goal_cxcy[1]})"
 
     # GPT-4에 대한 프롬프트 구성
-    prompt = f"Describe the following obstacles in a natural and detailed way for a visually impaired person: {bbox_list_str}. Translate it to Korean."
-
+    prompt = f"""
+        Obstacle Name at (bounding box): {bbox_list_str}.
+        Destination Name at (point): {dest_descriptions}.
+        Describe the following obstacles to the destination in a natural and simple way for a visually impaired person in Korean.
+        Don't talk about detailed image coordinates.
+    """
+    print("[PROMPT]: ", prompt)
     # OpenAI API 키 설정 (환경 변수에서 가져옴)
-    openai.api_key = "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"
-#   openai.base_url = "https://..."
-#   openai.default_headers = {"x-foo": "true"}
-
+    openai.api_key = OPENAI_API_KEY
     completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4-1106-preview",
+        #messages=[
+        #    {
+        #        "role": "user",
+        #        "content": prompt,
+        #    },
         messages=[
-            {
-                "role": "user",
-                "content": prompt,
-            },
+            {"role": "system", "content": "This is an image-based task."},
+            {"role": "user", "content": encoded_image}, #, "mimetype": "image/jpeg"
+            {"role": "user", "content": prompt},
         ],
+        #max_tokens=1000,
     )
-    return completion.choices[0].message.content
+
+    answer = completion.choices[0].message.content
+
+    print("[ANSWER]: ", answer)
+
+    return answer
 
     
 def main():
@@ -104,8 +128,7 @@ def main():
     #     # 2. generate answers 1 and 2 using LLM (byungok.han)
     
             # 결과 문장 생성
-            description = describe_all_bboxes_with_chatgpt(bboxes)
-            print(description)    
+            description = describe_all_bboxes_with_chatgpt(img_path, bboxes, goal_label_cxcy)
 
     #     # 3. merge answers into the final answer (later)
 
