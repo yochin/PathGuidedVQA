@@ -35,6 +35,7 @@ def describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy):
         Destination Name at (point): {dest_descriptions}.
         Describe the following obstacles to the destination in a natural and simple way for a visually impaired person in Korean.
         Don't talk about detailed image coordinates.
+
     """
     print("[PROMPT]: ", prompt)
     # OpenAI API 키 설정 (환경 변수에서 가져옴)
