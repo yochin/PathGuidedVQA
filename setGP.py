@@ -3,6 +3,60 @@ import numpy as np
 import pdb
 
 
+def calculate_iou(box1, box2):
+    """
+    두 사각형 영역의 IOU를 계산합니다.
+
+    Args:
+    box1 (list): 첫 번째 사각형 영역 [x1, y1, x2, y2]
+    box2 (list): 두 번째 사각형 영역 [xx1, yy1, xx2, yy2]
+
+    Returns:
+    float: 계산된 IOU 값
+    """
+    # 각 사각형의 (x1, y1, x2, y2) 추출
+    x1, y1, x2, y2 = box1
+    xx1, yy1, xx2, yy2 = box2
+
+    # 교차 영역 (intersection)의 (x, y) 좌표 계산
+    x_left = max(x1, xx1)
+    y_top = max(y1, yy1)
+    x_right = min(x2, xx2)
+    y_bottom = min(y2, yy2)
+
+    # 교차 영역이 있는지 확인
+    if x_right < x_left or y_bottom < y_top:
+        intersection_area = 0.0
+    else:
+        # 교차 영역의 넓이
+        intersection_area = (x_right - x_left) * (y_bottom - y_top)
+
+    # 각 사각형의 영역
+    area_box1 = (x2 - x1) * (y2 - y1)
+    area_box2 = (xx2 - xx1) * (yy2 - yy1)
+
+    # 합집합 영역
+    union_area = area_box1 + area_box2 - intersection_area
+
+    # IOU 계산
+    iou = intersection_area / union_area
+
+    return iou, intersection_area, area_box1, area_box2, union_area
+
+
+def remove_outer_bbox(list_bboxes, boundary_bbox, thresh_intersect_over_bbox=0.5):
+    res_list = []
+    for label_name, bbox, score in list_bboxes:
+        print('bbox: ', bbox)
+        print('boundary_bbox: ', boundary_bbox)
+        iou, intersection_area, area_box1, area_box2, union_area = calculate_iou(bbox, boundary_bbox)
+
+        if (intersection_area / area_box1) > thresh_intersect_over_bbox:
+            res_list.append([label_name, bbox, score])
+
+    return res_list
+
+
 #   calculate_divided_points between two points
 #   implemented by ChatGPT 4
 def calculate_divided_points(x1, y1, x2, y2, num_divisions):

@@ -4,10 +4,10 @@ import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import pdb
 import os
-import openai
-import base64
+# import openai
+# import base64
 
-from setGP import read_anno, get_gp, split_images
+from setGP import read_anno, get_gp, split_images, remove_outer_bbox
 
 OPENAI_API_KEY = "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"
 
@@ -149,22 +149,30 @@ def main():
             goal_label, goal_cxcy = goal_label_cxcy
             list_subimage_boxes_on_path, list_subimage_centerpoints_on_path, list_cropped_images = split_images(goal_cxcy, 1.0, 1.0, pil_image=img, sub_image_ratio=0.5, num_divisions=1)
         
+            for subimage_boxes, subimage_centerpoint, sub_image in zip(list_subimage_boxes_on_path, list_subimage_centerpoints_on_path, list_cropped_images):
+                # 1.4. remove outer bbox
+                thresh_intersect_over_bbox = 0.5
+                inner_bboxes = remove_outer_bbox(bboxes, subimage_boxes, thresh_intersect_over_bbox)
+
+
     # #     # 2. generate answers 1 and 2 using LLM (byungok.han)
     
             # 결과 문장 생성
-            description = describe_all_bboxes_with_chatgpt(img_path, bboxes, goal_label_cxcy)
+            # description = describe_all_bboxes_with_chatgpt(img_path, bboxes, goal_label_cxcy)
 
     #     # 3. merge answers into the final answer (later)
 
 
-            # 4. draw all
-            # draw start, mid, and goal points and boxes
-            img = Image.open(img_path)
-            draw = ImageDraw.Draw(img)
-            font = ImageFont.truetype('arial.ttf', size=40)
-            radius = 20
-            
-            for mid_box, mid_point in zip(list_subimage_boxes_on_path, list_subimage_centerpoints_on_path):
+                # 4. draw all
+                # draw start, mid, and goal points and boxes
+                img = Image.open(img_path)
+                draw = ImageDraw.Draw(img)
+                font = ImageFont.truetype('arial.ttf', size=40)
+                radius = 20
+                
+                # for mid_box, mid_point in zip(list_subimage_boxes_on_path, list_subimage_centerpoints_on_path):
+                mid_box = subimage_boxes
+                mid_point = subimage_centerpoint
                 mid_point_draw = [mid_point[0] * whole_width, mid_point[1] * whole_height]
                 mid_box_draw = [mid_box[0] * whole_width, mid_box[1] * whole_height, mid_box[2] * whole_width, mid_box[3] * whole_height]
 
@@ -173,19 +181,27 @@ def main():
                 draw.ellipse([mid_point_lu_draw, mid_point_rd_draw], fill='red')
                 draw.rectangle(mid_box_draw, outline='red', width=4)
 
-            # draw detection results
-            print(bboxes)
-            for label_name, bbox, score in bboxes:
-                # Bounding Box를 이미지에 그림
-                draw_bbox = [bbox[0] * whole_width, bbox[1] * whole_height, bbox[2] * whole_width, bbox[3] * whole_height]
-                draw.rectangle(draw_bbox, outline='yellow', width=2)
-                draw.text(draw_bbox[:2], label_name, fill='white', font=font)
+                # draw detection results
+                print(inner_bboxes)
+                for label_name, bbox, score in bboxes:
+                    # Bounding Box를 이미지에 그림
+                    draw_bbox = [bbox[0] * whole_width, bbox[1] * whole_height, bbox[2] * whole_width, bbox[3] * whole_height]
+                    draw.rectangle(draw_bbox, outline='yellow', width=2)
+                    draw.text(draw_bbox[:2], label_name, fill='white', font=font)
 
-            # 이미지 및 Bounding Box 표시
-            plt.imshow(img)
-            plt.axis('off')
-            plt.title(img_file + f', goal_label:{goal_label}')
-            plt.show()
+                # draw detection results
+                print(inner_bboxes)
+                for label_name, bbox, score in inner_bboxes:
+                    # Bounding Box를 이미지에 그림
+                    draw_bbox = [bbox[0] * whole_width, bbox[1] * whole_height, bbox[2] * whole_width, bbox[3] * whole_height]
+                    draw.rectangle(draw_bbox, outline='blue', width=2)
+                    draw.text(draw_bbox[:2], label_name, fill='white', font=font)
+
+                # 이미지 및 Bounding Box 표시
+                plt.imshow(img)
+                plt.axis('off')
+                plt.title(img_file + f', goal_label:{goal_label}')
+                plt.show()
 
 
 
