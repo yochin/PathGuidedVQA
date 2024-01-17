@@ -4,8 +4,8 @@ import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import pdb
 import os
-# import openai
-# import base64
+import openai
+import base64
 
 from setGP import read_anno, get_gp, split_images, remove_outer_bbox
 
@@ -40,15 +40,16 @@ def describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy):
     # OpenAI API 키 설정 (환경 변수에서 가져옴)
     openai.api_key = OPENAI_API_KEY
     completion = openai.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model = "gpt-4",
+        #model="gpt-4-1106-preview",
         #messages=[
         #    {
         #        "role": "user",
         #        "content": prompt,
         #    },
         messages=[
-            {"role": "system", "content": "This is an image-based task."},
-            {"role": "user", "content": encoded_image}, #, "mimetype": "image/jpeg"
+#            {"role": "system", "content": "This is an image-based task."},
+#            {"role": "user", "content": encoded_image}, #, "mimetype": "image/jpeg"
             {"role": "user", "content": prompt},
         ],
         #max_tokens=1000,
@@ -160,6 +161,7 @@ def main():
     
             # 결과 문장 생성
             # description = describe_all_bboxes_with_chatgpt(img_path, bboxes, goal_label_cxcy)
+                description = describe_all_bboxes_with_chatgpt(img_path, inner_bboxes, goal_label_cxcy)
 
     #     # 3. merge answers into the final answer (later)
 
