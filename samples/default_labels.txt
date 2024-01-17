@@ -1,0 +1,15 @@
+door closed
+door semi-open
+door open
+pedestrian traffic light red
+pedestrian traffic light green
+stairs
+escalator
+subway entrance
+automatic door
+elevator door
+elevator button
+subway ticket gate each
+subway ticket gate handicap
+subway ticket gate all
+subway screen door

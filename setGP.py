@@ -17,7 +17,7 @@ def calculate_divided_points(x1, y1, x2, y2, num_divisions):
     dy = (y2 - y1) / (num_divisions + 1)
 
     # 각 점의 좌표 계산
-    points = [(x1 + i * dx, y1 + i * dy) for i in range(1, num_divisions + 1)]
+    points = [[x1 + i * dx, y1 + i * dy] for i in range(1, num_divisions + 1)]
 
     return points
 
@@ -46,17 +46,38 @@ def adjust_rectangle_within_bounds(input_box, width, height):
         y1 = height - rect_height
         y2 = height
 
-    return x1, y1, x2, y2
+    return [x1, y1, x2, y2]
+            
+
+#   implemented by ChatGPT 4
+def clamp(n, min_value, max_value):
+    """
+    주어진 숫자 n을 min_value와 max_value 사이로 제한합니다.
+
+    Args:
+    n (float or int): 제한할 숫자
+    min_value (float or int): 최소값
+    max_value (float or int): 최대값
+
+    Returns:
+    float or int: 제한된 값
+    """
+    return max(min_value, min(n, max_value))
 
 
 # read xml and return the bbox information as a list
 # one bbox information has [label_name, [x_min, y_min, x_max, y_max], score] info.
-def read_anno(path_to_xml):
+def read_anno(path_to_xml, rescaling=False, filtering_score=-1.0):
     res_bboxes = []
 
     # XML 파일을 파싱하여 Bounding Box 정보를 가져옴
     tree = ET.parse(path_to_xml)
     root = tree.getroot()
+
+    if rescaling:
+        w_org = float(root.find('size').find('width').text)
+        h_org = float(root.find('size').find('height').text)
+
     for obj in root.iter('object'):
         bbox = obj.find('bndbox')
         x_min = int(bbox.find('xmin').text)
@@ -64,12 +85,22 @@ def read_anno(path_to_xml):
         x_max = int(bbox.find('xmax').text)
         y_max = int(bbox.find('ymax').text)
 
+        if rescaling:
+            x_min = clamp((float(x_min) / w_org), 0, 1)
+            x_max = clamp((float(x_max) / w_org), 0, 1)
+            y_min = clamp((float(y_min) / h_org), 0, 1)
+            y_max = clamp((float(y_max) / h_org), 0, 1)
+
         label = obj.find('name').text
 
-        score = float(obj.find('score').text)
+        if obj.find('score') is not None:
+            score = float(obj.find('score').text)
+        else:
+            score = 1.0
 
-        # add to the return list
-        res_bboxes.append([label, [x_min, y_min, x_max, y_max], score])
+        if score > filtering_score:
+            # add to the return list
+            res_bboxes.append([label, [x_min, y_min, x_max, y_max], score])
 
     return res_bboxes
 
@@ -93,11 +124,11 @@ def get_gp(list_bboxes, list_goal_objects):
 # split images into sub images
 def split_images(goal_point_cxcy, whole_width, whole_height, pil_image=None, sub_image_ratio=0.5, num_divisions=1):
     # sub-image size
-    sub_half_width = int(whole_width * sub_image_ratio / 2.0)
-    sub_half_height = int(whole_height * sub_image_ratio / 2.0)
+    sub_half_width = (whole_width * sub_image_ratio / 2.0)
+    sub_half_height = (whole_height * sub_image_ratio / 2.0)
 
     # generate a starting center point
-    start_cx = int(whole_width / 2.0)
+    start_cx = (whole_width / 2.0)
     start_cy = whole_height - sub_half_height
 
     
@@ -121,6 +152,5 @@ def split_images(goal_point_cxcy, whole_width, whole_height, pil_image=None, sub
         if list_cropped_images is not None:
             list_cropped_images.append(pil_image.crop(adjusted_box))
 
-        
     return list_boxes_on_path, list_points_on_path, list_cropped_images
 
