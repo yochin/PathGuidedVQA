@@ -1,0 +1,29 @@
+bicycle
+bus
+car
+carrier
+cat
+dog
+motorcycle
+movable signage
+person
+scooter
+stroller
+truck
+wheelchair
+barricade
+bench
+bollard
+chair
+fire hydrant
+kiosk
+parking meter
+pole
+potted plant
+power controller
+stop
+table
+traffic light
+traffic light controller
+traffic sign
+tree trunk
