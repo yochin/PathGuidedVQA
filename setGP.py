@@ -235,3 +235,4 @@ def split_images(goal_point_cxcy, whole_width, whole_height, pil_image=None, sub
 
     return list_boxes_on_path, list_points_on_path, list_cropped_images
 
+

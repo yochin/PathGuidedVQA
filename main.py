@@ -216,6 +216,7 @@ def main():
                 # description = describe_all_bboxes_with_chatgpt(sub_img_path_temp, inner_bboxes_reorigin, goal_label_cxcy_clamp)
                 # TODO: byungok.han
                 description = f'hellow world, this is {img_file}, {i_gp}, {i_sub}'
+                #description = describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy)
                 list_descriptions.append(description)
 
 
