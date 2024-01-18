@@ -44,17 +44,39 @@ def calculate_iou(box1, box2):
     return iou, intersection_area, area_box1, area_box2, union_area
 
 
-def remove_outer_bbox(list_bboxes, boundary_bbox, thresh_intersect_over_bbox=0.5):
-    res_list = []
+def reorigin_bbox_point(list_bboxes, point_xy, boundary_bbox):
+    res_list_reorigin = []
+
+    rescale_x = 1.0 / float(boundary_bbox[2] - boundary_bbox[0])
+    rescale_y = 1.0 / float(boundary_bbox[3] - boundary_bbox[1])
+
     for label_name, bbox, score in list_bboxes:
-        print('bbox: ', bbox)
-        print('boundary_bbox: ', boundary_bbox)
+            bbox_reorigin = [(bbox[0]-boundary_bbox[0]) * rescale_x, 
+                             (bbox[1]-boundary_bbox[1]) * rescale_y, 
+                             (bbox[2]-boundary_bbox[0]) * rescale_x, 
+                             (bbox[3]-boundary_bbox[1]) * rescale_y]
+            bbox_reorigin_clamp = [clamp(item, 0., 1.) for item in bbox_reorigin]
+            res_list_reorigin.append([label_name, bbox_reorigin_clamp, score])
+
+    res_xy_reorigin = [clamp((point_xy[0]-boundary_bbox[0]) * rescale_x, 0., 1.), 
+                       clamp((point_xy[1]-boundary_bbox[1]) * rescale_y, 0., 1.)]
+
+
+    return res_list_reorigin, res_xy_reorigin
+
+
+def remove_outer_bbox(list_bboxes, boundary_bbox, thresh_intersect_over_bbox=0.5):
+    res_list_original = []
+
+    for label_name, bbox, score in list_bboxes:
+        # print('bbox: ', bbox)
+        # print('boundary_bbox: ', boundary_bbox)
         iou, intersection_area, area_box1, area_box2, union_area = calculate_iou(bbox, boundary_bbox)
 
         if (intersection_area / area_box1) > thresh_intersect_over_bbox:
-            res_list.append([label_name, bbox, score])
+            res_list_original.append([label_name, bbox, score])
 
-    return res_list
+    return res_list_original
 
 
 #   calculate_divided_points between two points
@@ -196,6 +218,10 @@ def split_images(goal_point_cxcy, whole_width, whole_height, pil_image=None, sub
     # from point to box
     list_cropped_images = []
     list_boxes_on_path = []    
+    
+    if pil_image is not None:
+        real_width, real_height = pil_image.size
+
     for point_cxcy in list_points_on_path:
         new_box = [point_cxcy[0] - sub_half_width, point_cxcy[1] - sub_half_height, 
                    point_cxcy[0] + sub_half_width, point_cxcy[1] + sub_half_height]
@@ -204,7 +230,8 @@ def split_images(goal_point_cxcy, whole_width, whole_height, pil_image=None, sub
         list_boxes_on_path.append(adjusted_box)
 
         if list_cropped_images is not None:
-            list_cropped_images.append(pil_image.crop(adjusted_box))
+            adjusted_box_real_size = [adjusted_box[0]*real_width, adjusted_box[1]*real_height, adjusted_box[2]*real_width, adjusted_box[3]*real_height]
+            list_cropped_images.append(pil_image.crop(adjusted_box_real_size))
 
     return list_boxes_on_path, list_points_on_path, list_cropped_images
 
