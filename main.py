@@ -11,8 +11,6 @@ from setGP import read_anno, get_gp, split_images, remove_outer_bbox
 
 OPENAI_API_KEY = "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"
 
-
-
 def encode_image_to_base64(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
@@ -29,13 +27,14 @@ def describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy):
     dest_descriptions = f"{goal_label} at ({goal_cxcy[0]}, {goal_cxcy[1]})"
 
     # GPT-4에 대한 프롬프트 구성
-    prompt = f"""
-        Obstacle Name at (bounding box): {bbox_list_str}.
-        Destination Name at (point): {dest_descriptions}.
-        Describe the following obstacles to the destination in a natural and simple way for a visually impaired person in Korean.
-        Don't talk about detailed image coordinates.
-
-    """
+    prompt = (  "[Context: An image depicts the view from a pedestrian's position," 
+                "taken at a point 80cm above the ground for pedestrian navigation purposes." 
+                "In this image, the user's starting point is situated below the center of the image.]\n" 
+                f"[Obstacle Name at (bounding box): [{bbox_list_str}].]\n"              
+                f"[Destination Name at (point): [{dest_descriptions}].]\n"
+                "Describe the obstacles to the destination in a natural and simple way for a visually impaired person in Korean as a navigation assistant. "
+                "Don't talk about detailed image coordinates and consider perspective view of the 2D image property.")
+   
     print("[PROMPT]: ", prompt)
     # OpenAI API 키 설정 (환경 변수에서 가져옴)
     openai.api_key = OPENAI_API_KEY
