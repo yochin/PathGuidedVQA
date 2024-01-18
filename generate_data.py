@@ -77,6 +77,17 @@ def read_text(file_path):
             lines.append(line.strip())
 
     return lines
+
+def dict_to_xml(input_dict, root_tag):
+    root = ET.Element(root_tag)
+    for key, value in input_dict.items():
+        child = ET.SubElement(root, key)
+        child.text = str(value)
+    return root
+
+def save_xml(xml_element, filename):
+    tree = ET.ElementTree(xml_element)
+    tree.write(filename, encoding='utf-8', xml_declaration=True)
     
 
 # Assisted by ChatGPT 4
@@ -92,6 +103,18 @@ def main():
     choose_one_random_gp = True     # select one random gp when many gps are detected
 
     assert choose_one_random_gp     # treat the output filename related to several gps
+
+    # related to output
+    output_path = 'output'
+    output_path_qa = os.path.join(output_path, 'qa_unified')
+    output_path_debug = os.path.join(output_path, 'debug')
+
+    if not os.path.exists(output_path_qa):
+        os.makedirs(output_path_qa)
+
+    if not os.path.exists(output_path_debug):
+        os.makedirs(output_path_debug)
+
 
     # 폴더 내의 모든 파일 목록을 가져옴
     files = os.listdir(image_path)
@@ -113,7 +136,8 @@ def main():
         xml_path1 = os.path.join(anno_path1, os.path.splitext(img_file)[0] + '.xml')
         xml_path2 = os.path.join(anno_path2, os.path.splitext(img_file)[0] + '.xml')
         xml_path_gt = os.path.join(anno_path_gt, os.path.splitext(img_file)[0] + '.xml')
-        
+
+        img_file_wo_ext = os.path.splitext(img_file)[0]        
 
         # 이미지를 열고
         img = Image.open(img_path)
@@ -183,11 +207,22 @@ def main():
 
             draw.ellipse([goal_point_lu_draw, goal_point_rd_draw], fill='red')
 
-            # 이미지 및 Bounding Box 표시
-            plt.imshow(img)
-            plt.axis('off')
-            plt.title(img_file + f', goal_label:{goal_label}')
-            plt.show()
+            ## 이미지 및 Bounding Box 표시
+            #plt.imshow(img)
+            #plt.axis('off')
+            #plt.title(img_file + f', goal_label:{goal_label}')
+            #plt.show()
+
+            final_answer = description
+
+            output_dict = {
+                'image_filename': img_file,
+                'goal_position_xy': goal_cxcy,
+                'goal_object_label': goal_label,
+                'answer': final_answer
+            }
+            xml_all_info = dict_to_xml(output_dict, 'Annotation')
+            save_xml(xml_all_info, os.path.join(output_path_qa, img_file_wo_ext + '.xml'))
 
 
     return

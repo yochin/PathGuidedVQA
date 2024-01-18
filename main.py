@@ -83,10 +83,10 @@ def dict_to_xml(input_dict, root_tag):
         child.text = str(value)
     return root
 
+
 def save_xml(xml_element, filename):
     tree = ET.ElementTree(xml_element)
     tree.write(filename, encoding='utf-8', xml_declaration=True)
-
     
 
 # Assisted by ChatGPT 4
