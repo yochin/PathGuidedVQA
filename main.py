@@ -9,6 +9,7 @@ import base64
 import random
 
 from setGP import read_anno, get_gp, split_images, remove_outer_bbox, clamp, reorigin_bbox_point
+from tools import read_text
 
 OPENAI_API_KEY = "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"
 
@@ -61,20 +62,6 @@ def describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy):
     print("[ANSWER]: ", answer)
 
     return answer
-
-
-# Read text, return list
-# Coded by ChatGPT 4
-def read_text(file_path):
-    lines = []
-
-    # 파일을 열고 각 줄을 읽어 리스트에 추가합니다
-    with open(file_path, 'r') as file:
-        for line in file:
-            # strip() 함수를 사용하여 줄바꿈 문자를 제거합니다
-            lines.append(line.strip())
-
-    return lines
 
 
 def dict_to_xml(input_dict, root_tag):
