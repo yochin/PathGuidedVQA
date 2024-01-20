@@ -28,31 +28,33 @@ def select_and_save_files(src_file, dest_folder, list_file, num_files):
         for file in selected_files:
             f.write(file + '\n')
 
-# 사용 예시
-path_to_list = '/home/yochin/Desktop/GLIP/odinw/naeultech_231109_at_server/organized/ImageSets/list_train.txt'  # 원본 list 파일 경로
-dest_folder = '/home/yochin/Desktop/PathGuidedVQA/sample100'  # 대상 폴더 경로
-list_file = '/home/yochin/Desktop/PathGuidedVQA/sample100/list_selected_files.txt'  # 선택된 파일 목록을 저장할 파일
-num_files = 100  # 선택할 파일의 개수
 
-select_and_save_files(path_to_list, dest_folder, list_file, num_files)
+def example():
+    # 사용 예시
+    path_to_list = '/home/yochin/Desktop/GLIP/odinw/naeultech_231109_at_server/organized/ImageSets/list_train.txt'  # 원본 list 파일 경로
+    dest_folder = '/home/yochin/Desktop/PathGuidedVQA/sample100'  # 대상 폴더 경로
+    list_file = '/home/yochin/Desktop/PathGuidedVQA/sample100/list_selected_files.txt'  # 선택된 파일 목록을 저장할 파일
+    num_files = 100  # 선택할 파일의 개수
 
-# 저장된 파일 목록을 읽어와 지정된 폴더로 복사
-with open(list_file, 'r') as f:
-    for line in f:
-        file = line.strip()
+    select_and_save_files(path_to_list, dest_folder, list_file, num_files)
 
-        # image
-        shutil.copy(os.path.join('/home/yochin/Desktop/GLIP/OUTPUT_gd/toomuch_labels/resized_image', file + '.jpg'), 
-                    os.path.join(dest_folder, 'images', file + '.jpg'))
+    # 저장된 파일 목록을 읽어와 지정된 폴더로 복사
+    with open(list_file, 'r') as f:
+        for line in f:
+            file = line.strip()
 
-        # anno_aihub
-        shutil.copy(os.path.join('/home/yochin/Desktop/GLIP/OUTPUT_gd/aihub_labels/pred_pascal', file + '.xml'), 
-                    os.path.join(dest_folder, 'anno_aihub', file + '.xml'))
+            # image
+            shutil.copy(os.path.join('/home/yochin/Desktop/GLIP/OUTPUT_gd/toomuch_labels/resized_image', file + '.jpg'), 
+                        os.path.join(dest_folder, 'images', file + '.jpg'))
 
-        # anno_gt
-        shutil.copy(os.path.join('/home/yochin/Desktop/GLIP/OUTPUT_gd/toomuch_labels/pred_pascal', file + '.xml'), 
-                    os.path.join(dest_folder, 'anno_toomuch', file + '.xml'))
+            # anno_aihub
+            shutil.copy(os.path.join('/home/yochin/Desktop/GLIP/OUTPUT_gd/aihub_labels/pred_pascal', file + '.xml'), 
+                        os.path.join(dest_folder, 'anno_aihub', file + '.xml'))
 
-        # anno_toomuch
-        shutil.copy(os.path.join('/home/yochin/Desktop/GLIP/odinw/naeultech_231109_at_server/organized/Annotations', file + '.xml'), 
-                    os.path.join(dest_folder, 'anno_gt', file + '.xml'))
+            # anno_gt
+            shutil.copy(os.path.join('/home/yochin/Desktop/GLIP/OUTPUT_gd/toomuch_labels/pred_pascal', file + '.xml'), 
+                        os.path.join(dest_folder, 'anno_toomuch', file + '.xml'))
+
+            # anno_toomuch
+            shutil.copy(os.path.join('/home/yochin/Desktop/GLIP/odinw/naeultech_231109_at_server/organized/Annotations', file + '.xml'), 
+                        os.path.join(dest_folder, 'anno_gt', file + '.xml'))
