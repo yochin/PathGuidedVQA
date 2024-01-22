@@ -128,7 +128,8 @@ def main():
 
             img = Image.open(img_path)
             draw = ImageDraw.Draw(img)
-            font = ImageFont.truetype('arial.ttf', size=40)
+            #font = ImageFont.truetype('arial.ttf', size=40)
+            font = ImageFont.load_default()
             radius = 20
 
             for label_name, bbox, score in bboxes:
