@@ -9,7 +9,7 @@ import random
 
 from setGP import read_anno, get_gp, split_images, remove_outer_bbox, clamp, reorigin_bbox_point
 from tools import read_text, dict_to_xml, save_xml
-from vlm_description import describe_all_bboxes_with_chatgpt
+from vlm_description_for_multi_images import describe_all_bboxes_with_chatgpt, describe_all_bboxes_with_llava
   
 
 # Assisted by ChatGPT 4
@@ -21,6 +21,7 @@ def main():
     anno_path_gt = 'samples/anno_gt'
     label_path_gt = 'samples/default_labels.txt'
     label_path_removal = 'samples/removal_labels.txt'
+    llava_model_path = 'llava/WEIGHTS/llava-v1.5-7b'
 
 
     choose_one_random_gp = True     # select one random gp when many gps are detected
@@ -126,20 +127,19 @@ def main():
                 inner_bboxes_original = remove_outer_bbox(bboxes, subimage_boxes, thresh_intersect_over_bbox)
                 inner_bboxes_reorigin, goal_cxcy_reorigin = reorigin_bbox_point(inner_bboxes_original, goal_label_cxcy[1], subimage_boxes)
                 
-                # 2. generate answers 1 and 2 using LLM (byungok.han)
+                # 2. generate answers 1 and 2 using LLM
                 # 결과 문장 생성
-                # description = describe_all_bboxes_with_chatgpt(img_path, bboxes, goal_label_cxcy)
-                # description = describe_all_bboxes_with_chatgpt(img_path, inner_bboxes_reorigin, goal_label_cxcy)
                 goal_label_cxcy_clamp = [goal_label_cxcy[0], goal_cxcy_reorigin]
-
                 
                 sub_img_path_temp = os.path.join(output_path_subimage, f'{img_file_wo_ext}_{i_gp}_{i_sub}.jpg')
                 pil_sub_image.save(sub_img_path_temp)
 
-                # description = describe_all_bboxes_with_chatgpt(sub_img_path_temp, inner_bboxes_reorigin, goal_label_cxcy_clamp)
-                # TODO: byungok.han
-                description = f'hellow world, this is {img_file}, {i_gp}, {i_sub}'
-                #description = describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy)
+                # description = f'hellow world, this is {img_file}, {i_gp}, {i_sub}'
+                # description = describe_all_bboxes_with_chatgpt(img_path, inner_bboxes_reorigin, goal_label_cxcy_clamp)
+                description = describe_all_bboxes_with_llava(llava_model_path, img_path, bboxes, goal_label_cxcy_clamp)
+
+                pdb.set_trace()
+
                 list_descriptions.append(description)
 
 
@@ -218,9 +218,11 @@ def main():
                 img.save(path_to_debug)
 
 
-            # TODO: byungok.han
-            # 3. merge answers into the final answer (later)
+            # 3. merge answers into the final answer
             final_answer = list_descriptions[0] + list_descriptions[1] + list_descriptions[2]
+            # final_description = f'hellow world, this is {img_file}, {i_gp}, {i_sub}'
+            # final_description = describe_all_bboxes_with_chatgpt(img_path, inner_bboxes_reorigin, goal_label_cxcy_clamp)
+            # final_description = describe_all_bboxes_with_llava(llava_model_path, img_path, bboxes, goal_label_cxcy_clamp)
 
             output_dict = {
                 'image_filename': img_file,
