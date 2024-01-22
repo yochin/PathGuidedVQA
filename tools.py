@@ -1,6 +1,7 @@
 import os
 import random
 import shutil
+import xml.etree.ElementTree as ET
 
 # Read text, return list
 # Coded by ChatGPT 4
@@ -14,6 +15,20 @@ def read_text(file_path):
             lines.append(line.strip())
 
     return lines
+
+
+def dict_to_xml(input_dict, root_tag):
+    root = ET.Element(root_tag)
+    for key, value in input_dict.items():
+        child = ET.SubElement(root, key)
+        child.text = str(value)
+    return root
+
+
+def save_xml(xml_element, filename):
+    tree = ET.ElementTree(xml_element)
+    tree.write(filename, encoding='utf-8', xml_declaration=True)
+
 
 
 def select_and_save_files(src_file, dest_folder, list_file, num_files):

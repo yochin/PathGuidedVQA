@@ -1,6 +1,5 @@
 import os
 from PIL import Image, ImageDraw, ImageFont
-import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 import pdb
 import os
@@ -9,22 +8,9 @@ import base64
 import random
 
 from setGP import read_anno, get_gp, split_images, remove_outer_bbox, clamp, reorigin_bbox_point
-from tools import read_text
+from tools import read_text, dict_to_xml, save_xml
 from vlm_description import describe_all_bboxes_with_chatgpt
-
-
-def dict_to_xml(input_dict, root_tag):
-    root = ET.Element(root_tag)
-    for key, value in input_dict.items():
-        child = ET.SubElement(root, key)
-        child.text = str(value)
-    return root
-
-
-def save_xml(xml_element, filename):
-    tree = ET.ElementTree(xml_element)
-    tree.write(filename, encoding='utf-8', xml_declaration=True)
-    
+  
 
 # Assisted by ChatGPT 4
 def main():
