@@ -3,8 +3,6 @@ from PIL import Image, ImageDraw, ImageFont
 import matplotlib.pyplot as plt
 import pdb
 import os
-import openai
-import base64
 import random
 
 from setGP import read_anno, get_gp, split_images, remove_outer_bbox, clamp, reorigin_bbox_point
