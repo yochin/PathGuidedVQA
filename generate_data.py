@@ -19,6 +19,12 @@ def parse_args():
          '--db-dir', metavar='DIRECTORY', required=True,
          help='directory which contains images and object properties')
 
+     # lora 사용시에는 llava-model-base-dir이 있어야함
+     # ex) llava-v1.5-7b-lora 사용시 base model은 llava-v1.5-7b, model은 llava-v1.5-7b-lora
+     parser.add_argument(
+         '--llava-model-base-dir', default = None, metavar='DIRECTORY', 
+         help='directory for LLaVa checkpoints ')
+
      parser.add_argument(
          '--llava-model-dir', metavar='DIRECTORY', required=True,
          help='directory for LLaVa checkpoints ')
@@ -38,6 +44,7 @@ def main():
     anno_path_gt = os.path.join(args.db_dir, 'anno_gt')
     label_path_gt = os.path.join(args.db_dir, 'default_labels.txt')
     label_path_removal = os.path.join(args.db_dir, 'removal_labels.txt')
+    llava_model_base_path = args.llava_model_base_dir
     llava_model_path = args.llava_model_dir
 
     choose_one_random_gp = True     # select one random gp when many gps are detected
@@ -129,7 +136,7 @@ def main():
             goal_label, goal_cxcy = goal_label_cxcy
         
             #description = describe_all_bboxes_with_chatgpt(img_path, bboxes, goal_label_cxcy)
-            description = describe_all_bboxes_with_llava(llava_model_path, img_path, bboxes, goal_label_cxcy)
+            description = describe_all_bboxes_with_llava(llava_model_base_path, llava_model_path, img_path, bboxes, goal_label_cxcy)
 
             img = Image.open(img_path)
             draw = ImageDraw.Draw(img)

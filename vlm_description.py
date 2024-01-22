@@ -61,7 +61,7 @@ def describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy):
 
 
 
-def describe_all_bboxes_with_llava(llava_model_path, image_path, bboxes, goal_label_cxcy):
+def describe_all_bboxes_with_llava(llava_model_base_path, llava_model_path, image_path, bboxes, goal_label_cxcy):
 
     # 각 바운딩 박스에 대한 설명 구성
     bbox_descriptions = [f"{label} at ({x_min}, {y_min}, {x_max}, {y_max})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
@@ -83,7 +83,7 @@ def describe_all_bboxes_with_llava(llava_model_path, image_path, bboxes, goal_la
 
     args = type('Args', (), {
         "model_path": llava_model_path,
-        "model_base": None,
+        "model_base": llava_model_base_path,
         "model_name": get_model_name_from_path(llava_model_path),
         "query": prompt,
         "conv_mode": None,
