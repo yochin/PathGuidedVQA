@@ -124,7 +124,7 @@ def main():
             goal_label, goal_cxcy = goal_label_cxcy
         
             #description = describe_all_bboxes_with_chatgpt(img_path, bboxes, goal_label_cxcy)
-            description = describe_all_bboxes_with_llava(llava_model_path, image_path, bboxes, goal_label_cxcy)
+            description = describe_all_bboxes_with_llava(llava_model_path, img_path, bboxes, goal_label_cxcy)
 
             img = Image.open(img_path)
             draw = ImageDraw.Draw(img)
