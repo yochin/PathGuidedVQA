@@ -7,21 +7,38 @@ import random
 from setGP import read_anno, get_gp, split_images, remove_outer_bbox
 from tools import read_text, dict_to_xml, save_xml
 from vlm_description import describe_all_bboxes_with_chatgpt, describe_all_bboxes_with_llava
+import argparse
 
+
+def parse_args():
+
+     parser = argparse.ArgumentParser(
+        description='Generate QA (Questions and Answers) for Path Guided VQA')   
+
+     parser.add_argument(
+         '--db-dir', metavar='DIRECTORY', required=True,
+         help='directory which contains images and object properties')
+
+     parser.add_argument(
+         '--llava-model-dir', metavar='DIRECTORY', required=True,
+         help='directory for LLaVa checkpoints ')
+
+     return parser.parse_args()
 
 
 # Assisted by ChatGPT 4
-def main():
-    
+def main():    
+
+    args = parse_args()
 
     # 이미지가 저장된 폴더 경로
-    image_path = '/mnt/exp_disk/dbs/gd_datagen/sample100/images'
-    anno_path1 = '/mnt/exp_disk/dbs/gd_datagen/sample100/anno_aihub'
-    anno_path2 = '/mnt/exp_disk/dbs/gd_datagen/sample100/anno_toomuch'
-    anno_path_gt = '/mnt/exp_disk/dbs/gd_datagen/sample100/anno_gt'
-    label_path_gt = '/mnt/exp_disk/dbs/gd_datagen/sample100/default_labels.txt'
-    label_path_removal = '/mnt/exp_disk/dbs/gd_datagen/sample100/removal_labels.txt'
-    llava_model_path = '/mnt/data_disk/models/vlms/llava/llava-v1.5-7b'
+    image_path = args.db_dir + 'images'
+    anno_path1 = args.db_dir + 'anno_aihub'
+    anno_path2 = args.db_dir + 'anno_toomuch'
+    anno_path_gt = args.db_dir + 'anno_gt'
+    label_path_gt = args.db_dir + 'default_labels.txt'
+    label_path_removal = args.db_dir + 'removal_labels.txt'
+    llava_model_path = args.llava_model_dir
 
     choose_one_random_gp = True     # select one random gp when many gps are detected
 
