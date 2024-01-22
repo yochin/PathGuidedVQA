@@ -32,12 +32,12 @@ def main():
     args = parse_args()
 
     # 이미지가 저장된 폴더 경로
-    image_path = args.db_dir + 'images'
-    anno_path1 = args.db_dir + 'anno_aihub'
-    anno_path2 = args.db_dir + 'anno_toomuch'
-    anno_path_gt = args.db_dir + 'anno_gt'
-    label_path_gt = args.db_dir + 'default_labels.txt'
-    label_path_removal = args.db_dir + 'removal_labels.txt'
+    image_path = os.path.join(args.db_dir, 'images')
+    anno_path1 = os.path.join(args.db_dir, 'anno_aihub')
+    anno_path2 = os.path.join(args.db_dir, 'anno_toomuch')
+    anno_path_gt = os.path.join(args.db_dir, 'anno_gt')
+    label_path_gt = os.path.join(args.db_dir, 'default_labels.txt')
+    label_path_removal = os.path.join(args.db_dir, 'removal_labels.txt')
     llava_model_path = args.llava_model_dir
 
     choose_one_random_gp = True     # select one random gp when many gps are detected
