@@ -24,17 +24,16 @@ def save_xml(xml_element, filename):
 
 # Assisted by ChatGPT 4
 def main():
-
-
+    
 
     # 이미지가 저장된 폴더 경로
-    image_path = 'D:/DBs/gd_datagen/sample100/images'
-    anno_path1 = 'D:/DBs/gd_datagen/sample100/anno_aihub'
-    anno_path2 = 'D:/DBs/gd_datagen/sample100/anno_toomuch'
-    anno_path_gt = 'D:/DBs/gd_datagen/sample100/anno_gt'
-    label_path_gt = 'D:/DBs/gd_datagen/sample100/default_labels.txt'
-    label_path_removal = 'D:/DBs/gd_datagen/sample100/removal_labels.txt'
-    llava_model_path = 
+    image_path = '/mnt/exp_disk/dbs/gd_datagen/sample100/images'
+    anno_path1 = '/mnt/exp_disk/dbs/gd_datagen/sample100/anno_aihub'
+    anno_path2 = '/mnt/exp_disk/dbs/gd_datagen/sample100/anno_toomuch'
+    anno_path_gt = '/mnt/exp_disk/dbs/gd_datagen/anno_gt'
+    label_path_gt = '/mnt/exp_disk/dbs/gd_datagen/sample100/default_labels.txt'
+    label_path_removal = '/mnt/exp_disk/dbs/gd_datagen/removal_labels.txt'
+    llava_model_path = '/mnt/data_disk/models/vlms/llava/llava-v1.5-7b'
 
     choose_one_random_gp = True     # select one random gp when many gps are detected
 
