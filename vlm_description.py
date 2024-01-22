@@ -1,5 +1,8 @@
 import openai
 import base64
+from llava.model.builder import load_pretrained_model
+from llava.mm_utils import get_model_name_from_path
+from llava.eval.run_llava import eval_model
 
 
 OPENAI_API_KEY = "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"
@@ -56,3 +59,41 @@ def describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy):
 
     return answer
 
+
+
+
+def describe_all_bboxes_with_llava(llava_model_path, image_path, bboxes, goal_label_cxcy):
+
+    # 각 바운딩 박스에 대한 설명 구성
+    bbox_descriptions = [f"{label} at ({x_min}, {y_min}, {x_max}, {y_max})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
+    bbox_list_str = ", ".join(bbox_descriptions)
+    goal_label, goal_cxcy = goal_label_cxcy
+    dest_descriptions = f"{goal_label} at ({goal_cxcy[0]}, {goal_cxcy[1]})"
+
+    # GPT-4에 대한 프롬프트 구성
+    prompt = (  "[Context: The input image depicts the view from a pedestrian's position, " 
+                "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
+                "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
+                "Consider the starting point as the ground where the user is standing.]\n" 
+                f"[Obstacle Name at (bounding box): [{bbox_list_str}].]\n"              
+                f"[Destination Name at (point): [{dest_descriptions}].]\n"
+                "Describe the obstacles to the destination in a natural and simple way "
+                "for a visually impaired person as a navigation assistant in 3 sentences. "
+                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. "
+                "First, answer it in English, then translate it Korean.")
+
+    args = type('Args', (), {
+        "model_path": llava_model_path,
+        "model_base": None,
+        "model_name": get_model_name_from_path(llava_model_path),
+        "query": prompt,
+        "conv_mode": None,
+        "image_file": image_path,
+        "sep": ",",
+        "temperature": 0,
+        "top_p": None,
+        "num_beams": 1,
+        "max_new_tokens": 512
+    })()
+
+    return eval_model(args)
