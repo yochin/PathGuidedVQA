@@ -92,7 +92,7 @@ def describe_all_bboxes_with_llava(llava_model_base_path, llava_model_path, imag
         "temperature": 0,
         "top_p": None,
         "num_beams": 1,
-        "max_new_tokens": 100000
+        "max_new_tokens": 512
     })()
 
     return eval_model(args)
