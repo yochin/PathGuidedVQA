@@ -7,7 +7,7 @@ import random
 
 from setGP import read_anno, get_gp, split_images, remove_outer_bbox
 from tools import read_text
-from vlm_description import describe_all_bboxes_with_chatgpt
+from vlm_description import describe_all_bboxes_with_chatgpt, describe_all_bboxes_with_llava
 
 
 def dict_to_xml(input_dict, root_tag):
