@@ -7,19 +7,44 @@ import random
 
 from setGP import read_anno, get_gp, split_images, remove_outer_bbox, clamp, reorigin_bbox_point
 from tools import read_text, dict_to_xml, save_xml
-from vlm_description_for_multi_images import describe_all_bboxes_with_chatgpt, describe_all_bboxes_with_llava
-  
+from vlm_description_for_multi_images import LargeMultimodalModels
+import argparse
+
+def parse_args():
+
+     parser = argparse.ArgumentParser(
+        description='Generate QA (Questions and Answers) for Path Guided VQA')   
+
+     parser.add_argument(
+         '--db-dir', metavar='DIRECTORY', required=True,
+         help='directory which contains images and object properties')
+
+     parser.add_argument(
+         '--llava-model-dir', metavar='DIRECTORY', required=True,
+         help='directory for LLaVa checkpoints ')
+     
+     parser.add_argument(
+         '--output', metavar='DIRECTORY', required=True,
+         help='directory for output ')
+
+     return parser.parse_args()
+
 
 # Assisted by ChatGPT 4
 def main():
+    args = parse_args()
+
     # 이미지가 저장된 폴더 경로
-    image_path = 'samples/images'
-    anno_path1 = 'samples/anno_aihub'
-    anno_path2 = 'samples/anno_toomuch'
-    anno_path_gt = 'samples/anno_gt'
-    label_path_gt = 'samples/default_labels.txt'
-    label_path_removal = 'samples/removal_labels.txt'
-    llava_model_path = 'llava/WEIGHTS/llava-v1.5-7b'
+    image_path = os.path.join(args.db_dir, 'images')
+    anno_path1 = os.path.join(args.db_dir, 'anno_aihub')
+    anno_path2 = os.path.join(args.db_dir, 'anno_toomuch')
+    anno_path_gt = os.path.join(args.db_dir, 'anno_gt')
+    label_path_gt = os.path.join(args.db_dir, 'default_labels.txt')
+    label_path_removal = os.path.join(args.db_dir, 'removal_labels.txt')
+    llava_model_path = args.llava_model_dir
+    output_path = args.output
+
+    lvm = LargeMultimodalModels('llava', llava_model_path)
 
 
     choose_one_random_gp = True     # select one random gp when many gps are detected
@@ -27,7 +52,6 @@ def main():
     assert choose_one_random_gp     # treat the output filename related to several gps
 
     # related to output
-    output_path = 'output'
     output_path_subimage = os.path.join(output_path, 'sub_images')
     output_path_qa = os.path.join(output_path, 'qa')
     output_path_debug = os.path.join(output_path, 'debug')
@@ -114,10 +138,11 @@ def main():
         list_descriptions = []
 
         # 1.3. split images into sub-images
+        num_cropped_image = 3
         for i_gp, goal_label_cxcy in enumerate(list_labels_gps):
             print('the goal info:', goal_label_cxcy)
             goal_label, goal_cxcy = goal_label_cxcy
-            list_subimage_boxes_on_path, list_subimage_centerpoints_on_path, list_cropped_images = split_images(goal_cxcy, 1.0, 1.0, pil_image=img, sub_image_ratio=0.5, num_divisions=1)
+            list_subimage_boxes_on_path, list_subimage_centerpoints_on_path, list_cropped_images = split_images(goal_cxcy, 1.0, 1.0, pil_image=img, sub_image_ratio=0.5, num_divisions=(num_cropped_image-2))
         
             for i_sub, (subimage_boxes, subimage_centerpoint, pil_sub_image) in enumerate(zip(list_subimage_boxes_on_path, list_subimage_centerpoints_on_path, list_cropped_images)):
                 # 1.4. remove outer bbox
@@ -134,10 +159,9 @@ def main():
 
                 # description = f'hellow world, this is {img_file}, {i_gp}, {i_sub}'
                 # description = describe_all_bboxes_with_chatgpt(img_path, inner_bboxes_reorigin, goal_label_cxcy_clamp)
-                description = describe_all_bboxes_with_llava(llava_model_path, img_path, bboxes, goal_label_cxcy_clamp)
-
-                pdb.set_trace()
-
+                # description = describe_all_bboxes_with_llava(llava_model_path, img_path, bboxes, goal_label_cxcy_clamp)
+                description = lvm.describe_images_with_boxes(img_path, bboxes, goal_label_cxcy_clamp, order=(i_sub+1), num_total=num_cropped_image, 
+                                                             merge=False, previous_descriptions=[])
                 list_descriptions.append(description)
 
 
@@ -215,18 +239,25 @@ def main():
                 path_to_debug = os.path.join(output_path_debug, f'{img_file_wo_ext}_{i_gp}_whole_{i_sub}.jpg')
                 img.save(path_to_debug)
 
+                print(f'{i_sub}: {description}')
+
 
             # 3. merge answers into the final answer
-            final_answer = list_descriptions[0] + list_descriptions[1] + list_descriptions[2]
+            # final_answer = list_descriptions[0] + list_descriptions[1] + list_descriptions[2]
             # final_description = f'hellow world, this is {img_file}, {i_gp}, {i_sub}'
             # final_description = describe_all_bboxes_with_chatgpt(img_path, inner_bboxes_reorigin, goal_label_cxcy_clamp)
             # final_description = describe_all_bboxes_with_llava(llava_model_path, img_path, bboxes, goal_label_cxcy_clamp)
+            final_description = lvm.describe_images_with_boxes(img_path, bboxes, goal_label_cxcy_clamp, order=num_cropped_image, num_total=num_cropped_image, 
+                                                             merge=True, previous_descriptions=list_descriptions)
 
             output_dict = {
                 'image_filename': img_file,
                 'goal_position_xy': goal_cxcy,
                 'goal_object_label': goal_label,
-                'answer': final_answer
+                'answer1': list_descriptions[0],
+                'answer2': list_descriptions[1],
+                'answer3': list_descriptions[2],
+                'answer': final_description
             }
             xml_all_info = dict_to_xml(output_dict, 'Annotation')
             save_xml(xml_all_info, os.path.join(output_path_qa, img_file_wo_ext + '.xml'))

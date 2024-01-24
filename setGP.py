@@ -163,9 +163,14 @@ def read_anno(path_to_xml, rescaling=False, filtering_score=-1.0):
 
         if rescaling:
             x_min = clamp((float(x_min) / w_org), 0, 1)
-            x_max = clamp((float(x_max) / w_org), 0, 1)
             y_min = clamp((float(y_min) / h_org), 0, 1)
+            x_max = clamp((float(x_max) / w_org), 0, 1)
             y_max = clamp((float(y_max) / h_org), 0, 1)
+
+        x_min = round(x_min, 2)
+        y_min = round(y_min, 2)
+        x_max = round(x_max, 2)
+        y_max = round(y_max, 2)
 
         label = obj.find('name').text
 
