@@ -83,7 +83,7 @@ def describe_all_bboxes_with_llava(llava_model_base_path, llava_model_path, imag
 
     print("[PROMPT] ====================================================")
     print(prompt)
-
+    print("=============================================================")
     args = type('Args', (), {
         "model_path": llava_model_path,
         "model_base": llava_model_base_path,
@@ -102,5 +102,6 @@ def describe_all_bboxes_with_llava(llava_model_base_path, llava_model_path, imag
 
     print("[ANSWER] ====================================================")
     print(answer)
+    print("=============================================================")
 
     return eval_model(args)
