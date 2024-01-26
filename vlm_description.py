@@ -81,6 +81,9 @@ def describe_all_bboxes_with_llava(llava_model_base_path, llava_model_path, imag
                 "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. "
                 "First, answer it in English, then translate it Korean.")
 
+    print("[PROMPT] ====================================================")
+    print(prompt)
+
     args = type('Args', (), {
         "model_path": llava_model_path,
         "model_base": llava_model_base_path,
@@ -94,5 +97,10 @@ def describe_all_bboxes_with_llava(llava_model_base_path, llava_model_path, imag
         "num_beams": 1,
         "max_new_tokens": 512
     })()
+    
+    answer = eval_model(args)
+
+    print("[ANSWER] ====================================================")
+    print(answer)
 
     return eval_model(args)
