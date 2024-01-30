@@ -30,6 +30,15 @@ def save_xml(xml_element, filename):
     tree.write(filename, encoding='utf-8', xml_declaration=True)
 
 
+def read_gt_pair_from_xml(xml_file_path):
+
+    tree = ET.parse(xml_file_path)
+    root = tree.getroot()
+    img_filename = root.find('image_filename').text
+    answer = root.find('answer').text
+
+    return img_filename, answer
+
 
 def select_and_save_files(src_file, dest_folder, list_file, num_files):
     # 특정 파일 목록 읽기
