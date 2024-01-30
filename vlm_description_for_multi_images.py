@@ -1,8 +1,7 @@
 import openai
 import base64
-from llava.model.builder import load_pretrained_model
 from llava.mm_utils import get_model_name_from_path
-from llava.eval.run_llava import eval_model
+from llava.eval.run_llava import eval_model, init_llava_model, run_llava_model
 import pdb
 
 
@@ -12,30 +11,65 @@ def encode_image_to_base64(image_path):
     
 
 class LargeMultimodalModels():
-    def __init__(self, model_name=None, llava_model_path=None):
+    def __init__(self, model_name=None, llava_model_base_path=None, llava_model_path=None):
         self.possible_models = ['dummy', 'llava', 'chatgpt']
 
         self.model_name = model_name
 
         assert self.model_name in self.possible_models
 
+        # for gpt4
         self.OPENAI_API_KEY = "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"
-        self.llava_model_path = llava_model_path
 
+        # for llava
+        if self.model_name == 'llava':
+            self.llava_model_path = llava_model_path
+            self.llava_model_base_path = llava_model_base_path
+            self.llava_tokenizer, self.llava_model, self.llava_image_processor, \
+            self.llava_context_len, self.llava_model_name = init_llava_model(model_path=self.llava_model_path,
+                                                                             model_base=self.llava_model_base_path)
 
     def describe_images_with_boxes(self, image_path, bboxes, goal_label_cxcy, order, num_total, merge=False, previous_descriptions=[]):
+        print('\nimage_path:', image_path)
+        print('bboxes:', bboxes)
+        print('goal_label_cxcy:', goal_label_cxcy)
+        print('order:', order)
+        print('num_total:', num_total)
+        print('merge:', merge)
+        print('previous_descriptions:', previous_descriptions)
+
         res_answer = ''
+        res_query = ''
 
         if self.model_name == 'dummy':
             res_answer = self.describe_all_bboxes_with_dummy()
         elif self.model_name == 'llava':
-            res_answer = self.describe_all_bboxes_with_llava(self.llava_model_path, image_path, bboxes, goal_label_cxcy, order, num_total, merge, previous_descriptions)
+            res_query, res_answer = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, order, num_total, merge, previous_descriptions)
         elif self.model_name == 'chatgpt':
             res_answer = self.describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy)
         else:
             raise AssertionError(f'{self.model_name} is not supported!')
         
-        return res_answer
+        return res_query, res_answer
+    
+    def describe_whole_images_with_boxes(self, image_path, bboxes, goal_label_cxcy):
+        print('\nimage_path:', image_path)
+        print('bboxes:', bboxes)
+        print('goal_label_cxcy:', goal_label_cxcy)
+
+        res_answer = ''
+        res_query = ''
+
+        if self.model_name == 'dummy':
+            res_answer = self.describe_all_bboxes_with_dummy()
+        elif self.model_name == 'llava':
+            res_query, res_answer = self.describe_all_bboxes_with_llava_in_whole_image(image_path, bboxes, goal_label_cxcy)
+        elif self.model_name == 'chatgpt':
+            res_answer = self.describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy)
+        else:
+            raise AssertionError(f'{self.model_name} is not supported!')
+        
+        return res_query, res_answer
 
 
     def describe_all_bboxes_with_dummy(self):
@@ -92,24 +126,27 @@ class LargeMultimodalModels():
         return answer
 
 
-
-    def describe_all_bboxes_with_llava(self, llava_model_path, image_path, bboxes, goal_label_cxcy, order, num_total, merge=False, previous_descriptions=[]):
-
-        # 각 바운딩 박스에 대한 설명 구성
-        bbox_descriptions = [f"{label} at ({x_min}, {y_min}, {x_max}, {y_max})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
-        bbox_list_str = ", ".join(bbox_descriptions)
-        goal_label, goal_cxcy = goal_label_cxcy
-        dest_descriptions = f"{goal_label} at ({goal_cxcy[0]}, {goal_cxcy[1]})"
+    def order_to_str(self, order):
+        # if order == 1:
+        #     str_order = 'first'
+        # elif order == 2:
+        #     str_order = 'second'
+        # elif order == 3:
+        #     str_order = 'third'
 
         if order == 1:
-            str_order = 'first'
+            str_order = 'a starting point'
         elif order == 2:
-            str_order = 'second'
+            str_order = 'a midpoint'
         elif order == 3:
-            str_order = 'third'
+            str_order = 'a destination'
         else:
             raise AssertionError('Not implemented')
+        
+        return str_order
+    
 
+    def num_to_str(self, num_total):
         if num_total == 1:
             raise AssertionError('Not implemented')
         elif num_total == 2:
@@ -119,18 +156,35 @@ class LargeMultimodalModels():
         else:
             raise AssertionError('Not implemented')
         
+        return str_num_total
+    
+
+    def describe_all_bboxes_with_llava(self, image_path, bboxes, goal_label_cxcy, order, num_total, merge=False, previous_descriptions=[]):
+
+        # 각 바운딩 박스에 대한 설명 구성
+        bbox_descriptions = [f"{label} at ({round(x_min, 2)}, {round(y_min, 2)}, {round(x_max, 2)}, {round(y_max, 2)})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
+        bbox_list_str = ", ".join(bbox_descriptions)
+        goal_label, goal_cxcy = goal_label_cxcy
+        dest_descriptions = f"{goal_label} at ({round(goal_cxcy[0], 2)}, {round(goal_cxcy[1], 2)})"
+
+        str_order = self.order_to_str(order)
+        str_num_total = self.num_to_str(num_total)
+        
         if merge:
             previous_prompt = []
             
             if len(previous_descriptions) == 3:
-                previous_prompt.append('The first description is following: ')
+                previous_prompt.append('The description at a starting point is that ')
                 previous_prompt.append(previous_descriptions[0])
+                previous_prompt.append(' ')
                                 
-                previous_prompt.append('The second description is following: ')
+                previous_prompt.append('The description at a midpoint is that ')
                 previous_prompt.append(previous_descriptions[1])
+                previous_prompt.append(' ')
 
-                previous_prompt.append('The third description is following: ')
+                previous_prompt.append('The description at a destination is that ')
                 previous_prompt.append(previous_descriptions[2])
+                previous_prompt.append(' ')
 
                 previous_prompt = ' '.join(previous_prompt)
 
@@ -138,8 +192,20 @@ class LargeMultimodalModels():
             else:
                 raise AssertionError('Not implemented')
 
-            prompt = (  f"[Context: The input image is whole image of the route to the destination. "
-                        "The input image depicts the view from a pedestrian's position, " 
+            # # 프롬프트 구성
+            # prompt = (  f"[Context: The input image is whole image of the route to the destination. "
+            #             "The input image depicts the view from a pedestrian's position, " 
+            #             "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
+            #             "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
+            #             "Consider the starting point as the ground where the user is standing.]\n" 
+            #             f"[Obstacle Name at (bounding box): [{bbox_list_str}].]\n"
+            #             f"[Destination Name at (point): [{dest_descriptions}].]\n"
+            #             f"{previous_prompt}"
+            #             "Describe the obstacles to the destination in a natural and simple way "
+            #             "for a visually impaired person as a navigation assistant in 3 sentences. "
+            #             "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
+
+            prompt = (  f"[Context: The input image depicts the view from a pedestrian's position, " 
                         "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
                         "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
                         "Consider the starting point as the ground where the user is standing.]\n" 
@@ -151,7 +217,18 @@ class LargeMultimodalModels():
                         "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
         else:
             # 프롬프트 구성
-            prompt = (  f"[Context: The input image is the {str_order} of {str_num_total} images of the route to the destination. "
+            # prompt = (  f"[Context: The input image is the {str_order} of {str_num_total} images of the route to the destination. "
+            #             "The input image depicts the view from a pedestrian's position, " 
+            #             "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
+            #             "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
+            #             "Consider the starting point as the ground where the user is standing.]\n" 
+            #             f"[Obstacle Name at (bounding box): [{bbox_list_str}].]\n"
+            #             f"[Destination Name at (point): [{dest_descriptions}].]\n"
+            #             "Describe the obstacles to the destination in a natural and simple way "
+            #             "for a visually impaired person as a navigation assistant in 3 sentences. "
+            #             "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
+
+            prompt = (  f"[Context: The input image is taken at {str_order} on the route to the destination. "
                         "The input image depicts the view from a pedestrian's position, " 
                         "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
                         "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
@@ -163,23 +240,59 @@ class LargeMultimodalModels():
                         "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
         
 
-        llm_args = type('Args', (), {
-            "model_path": llava_model_path,
-            "model_base": None,
-            "model_name": get_model_name_from_path(llava_model_path),
-            "query": prompt,
-            "conv_mode": None,
-            "image_file": image_path,
-            "sep": ",",
-            "temperature": 0,
-            "top_p": None,
-            "num_beams": 1,
-            "max_new_tokens": 512
-        })()
+        # llm_args = type('Args', (), {
+        #     "model_path": llava_model_path,
+        #     "model_base": llava_model_base_path,
+        #     "model_name": get_model_name_from_path(llava_model_path),
+        #     "query": prompt,
+        #     "conv_mode": None,
+        #     "image_file": image_path,
+        #     "sep": ",",
+        #     "temperature": 0,
+        #     "top_p": None,
+        #     "num_beams": 1,
+        #     "max_new_tokens": 512
+        # })()
+        # res_answer = eval_model(llm_args)
+        res_answer = run_llava_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
+                                     input_query=prompt, image_files=image_path, input_conv_mode=None, input_temperature=0, input_top_p=None, input_num_beams=1, input_max_new_tokens=512, model_name=self.llava_model_name)
 
-        res_answer = eval_model(llm_args)
+
 
         # print('query: ', prompt)
         # print('answer: ', res_answer)
 
-        return res_answer
+        return prompt, res_answer
+    
+
+    def describe_all_bboxes_with_llava_in_whole_image(self, image_path, bboxes, goal_label_cxcy):
+
+        # 각 바운딩 박스에 대한 설명 구성
+        bbox_descriptions = [f"{label} at ({round(x_min, 2)}, {round(y_min, 2)}, {round(x_max, 2)}, {round(y_max, 2)})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
+        bbox_list_str = ", ".join(bbox_descriptions)
+        goal_label, goal_cxcy = goal_label_cxcy
+        dest_descriptions = f"{goal_label} at ({round(goal_cxcy[0], 2)}, {round(goal_cxcy[1], 2)})"
+
+        # "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions. USER: <image>\n"
+        # ours beloow prompt
+        # "ASSISTANT:"
+        if len(bboxes) == 0:
+            prompt = (f"After explaining the overall photo from near to far, explain the path to the {goal_label}, which is the current destination, "
+                      "explain the obstacles that exist on the path, and tell us what to do. ")
+        else:
+            prompt = (
+                "The image contains the following objects, which are located within bounding boxes represented by four numbers. "
+                f"These four numbers correspond to the normalized pixel values for left, top, right, and bottom. The included objects are {bbox_list_str}.\n"
+                f"After explaining the overall photo from near to far, explain the path to the {dest_descriptions}, which is the current destination and the two numbers represent the normalized horizontal and vertical axis values of the image.\n"
+                "Explain the obstacles that exist on the path, and tell us what to do. "
+            )
+            
+        res_answer = run_llava_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
+                                     input_query=prompt, image_files=image_path, input_conv_mode=None, input_temperature=0, input_top_p=None, input_num_beams=5, input_max_new_tokens=512, model_name=self.llava_model_name)
+
+
+
+        # print('query: ', prompt)
+        # print('answer: ', res_answer)
+
+        return prompt, res_answer

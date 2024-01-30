@@ -73,7 +73,7 @@ def remove_outer_bbox(list_bboxes, boundary_bbox, thresh_intersect_over_bbox=0.5
         # print('boundary_bbox: ', boundary_bbox)
         iou, intersection_area, area_box1, area_box2, union_area = calculate_iou(bbox, boundary_bbox)
 
-        if (intersection_area / area_box1) > thresh_intersect_over_bbox:
+        if (area_box1 > 0.) and ((intersection_area / area_box1) > thresh_intersect_over_bbox):
             res_list_original.append([label_name, bbox, score])
 
     return res_list_original
@@ -175,7 +175,7 @@ def read_anno(path_to_xml, rescaling=False, filtering_score=-1.0):
         label = obj.find('name').text
 
         if obj.find('score') is not None:
-            score = float(obj.find('score').text)
+            score = round(float(obj.find('score').text), 2)
         else:
             score = 1.0
 
@@ -189,7 +189,7 @@ def read_anno(path_to_xml, rescaling=False, filtering_score=-1.0):
 
 # filter the object from list_bboxes info, then generate the list of label_name and goal positions (x, y)
 # return: list of [label_name, [cx, cy]]
-def get_gp(list_bboxes, list_goal_objects):
+def get_gp(list_bboxes, list_goal_objects, return_as_bbox=False):
     res_gps = []
 
     for bbox_info in list_bboxes:
@@ -197,7 +197,10 @@ def get_gp(list_bboxes, list_goal_objects):
         bbox = bbox_info[1]
 
         if label in list_goal_objects:
-            res_gps.append([label, [(float(bbox[0]+bbox[2])/2.), float(bbox[1]+bbox[3])/2.]])
+            if return_as_bbox:
+                res_gps.append([label, bbox])
+            else:
+                res_gps.append([label, [(float(bbox[0]+bbox[2])/2.), float(bbox[1]+bbox[3])/2.]])
 
     return res_gps
 
