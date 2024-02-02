@@ -91,8 +91,19 @@ def main():
     llava_model_path = args.llava_model_dir
     output_path = args.output
 
+    # option: crop image into sub-images
     num_cropped_image = 1
-    return_as_bbox = False
+
+    # option: treat point as bbox
+    return_as_bbox = True
+
+    # option: detection info
+    use_det_info = True
+
+    # 
+
+    if return_as_bbox:
+        assert num_cropped_image == 1
 
     lvm = LargeMultimodalModels('llava', llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path)
 
@@ -120,6 +131,7 @@ def main():
 
     # 이미지 파일들만 필터링
     image_files = [f for f in files if f.endswith(('.png', '.jpg', '.jpeg'))]
+    sorted(image_files)
 
     # 0. Definition
     # list_goal_names = ['stairs', 'door', 'elevator']
@@ -130,7 +142,8 @@ def main():
     for img_file in image_files:
         # 이미지 파일의 전체 경로
         img_path = os.path.join(image_path, img_file)
-        print(f'\nprocessing {img_path}...')
+        print('==============================\n')
+        print(f'processing {img_path}...')
         # XML 파일의 전체 경로 (파일 이름은 같지만 확장자만 xml로 변경)
         xml_path1 = os.path.join(anno_path1, os.path.splitext(img_file)[0] + '.xml')
         xml_path2 = os.path.join(anno_path2, os.path.splitext(img_file)[0] + '.xml')
@@ -194,14 +207,9 @@ def main():
 
             goal_label, goal_cxcy = goal_label_cxcy
 
-            if num_cropped_image == 1:  # just use the whole image
-                list_subimage_boxes_on_path = [0., 0., 1., 1.]
-                list_subimage_centerpoints_on_path = goal_cxcy
-                list_cropped_images = img
-            else:
-                list_subimage_boxes_on_path, list_subimage_centerpoints_on_path, list_cropped_images = split_images(goal_cxcy, 1.0, 1.0, pil_image=img, sub_image_ratio=0.5, num_divisions=(num_cropped_image-2))
-        
             if num_cropped_image > 1:
+                list_subimage_boxes_on_path, list_subimage_centerpoints_on_path, list_cropped_images = split_images(goal_cxcy, 1.0, 1.0, pil_image=img, sub_image_ratio=0.5, num_divisions=(num_cropped_image-2))
+
                 for i_sub, (subimage_boxes, subimage_centerpoint, pil_sub_image) in enumerate(zip(list_subimage_boxes_on_path, list_subimage_centerpoints_on_path, list_cropped_images)):
                     # 1.4. remove outer bbox
                     thresh_intersect_over_bbox = 0.5
@@ -314,9 +322,10 @@ def main():
                                                                 merge=True, previous_descriptions=list_descriptions)
                 
             else:
-                # bboxes = []
-                final_query, final_description = lvm.describe_whole_images_with_boxes([img_path], bboxes, goal_label_cxcy)
-            
+                if use_det_info is False:
+                    bboxes = []
+
+                final_query, final_description = lvm.describe_whole_images_with_boxes([img_path], bboxes, goal_label_cxcy, step_by_step=True)
 
             output_dict = {
                 'image_filename': img_file,
@@ -344,7 +353,10 @@ def main():
             # 4.3. draw all whole original image
             # draw start, mid, and goal points and boxes
             img = Image.open(img_path)
-            draw = ImageDraw.Draw(img)
+            img_note = Image.new('RGB', (whole_width, int(whole_height*1.5)), color='white')
+            img_note.paste(img, (0, 0))
+
+            draw = ImageDraw.Draw(img_note)
             font = ImageFont.truetype('arial.ttf', size=20)
             radius = 20
             
@@ -364,11 +376,11 @@ def main():
 
             # draw.text((10, whole_height-60), f'q:{i_sub_query}', fill='red', font=font)
             # draw.text((10, whole_height-30), f'a:{final_description}', fill='blue', font=font)
-            draw_long_text(draw, position=(10, 10), text=f'a:{final_description}', fill='blue', font=font, max_width=whole_width-20)
+            draw_long_text(draw, position=(10, whole_height+10), text=f'a:{final_description}', fill='blue', font=font, max_width=whole_width-20)
             
 
             path_to_debug = os.path.join(output_path_debug, f'{img_file_wo_ext}_{i_gp}_whole_final.jpg')
-            img.save(path_to_debug)
+            img_note.save(path_to_debug)
     return
 
 if __name__ == '__main__':

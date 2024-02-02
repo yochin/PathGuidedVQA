@@ -200,6 +200,8 @@ def run_llava_model(tokenizer, model, image_processor, context_len, input_query,
     conv.append_message(conv.roles[1], None)
     prompt = conv.get_prompt()
 
+    print('\t prompt @ llava: ', prompt)
+
     images = load_images(image_files)
     images_tensor = process_images(
         images,
@@ -244,6 +246,8 @@ def run_llava_model(tokenizer, model, image_processor, context_len, input_query,
         outputs = outputs[: -len(stop_str)]
     outputs = outputs.strip()
     # print(outputs)
+
+    print('\t answer @ llava: ', outputs)
 
     return outputs
 
