@@ -168,14 +168,14 @@ def init_ferret_model(model_path, model_base, model_name=None):
 
 
 def run_ferret_model(tokenizer, model, image_processor, context_len, input_query, image_files, input_conv_mode, input_temperature, input_top_p, input_num_beams, input_max_new_tokens, model_name):
-    if input_temperature == 0:
-        torch.use_deterministic_algorithms = True
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-    else:
-        torch.use_deterministic_algorithms = False
-        torch.backends.cudnn.deterministic = False
-        torch.backends.cudnn.benchmark = True 
+    # if input_temperature == 0:
+    #     torch.use_deterministic_algorithms = True
+    #     torch.backends.cudnn.deterministic = True
+    #     torch.backends.cudnn.benchmark = False
+    # else:
+    #     torch.use_deterministic_algorithms = False
+    #     torch.backends.cudnn.deterministic = False
+    #     torch.backends.cudnn.benchmark = True 
 
 #     qs = input_query
 #     image_token_se = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN

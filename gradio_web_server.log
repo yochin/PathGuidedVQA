@@ -429,3 +429,113 @@
 2024-02-02 11:24:43 | INFO | stdout | What's the object [region0]? ASSISTANT: The object [4, 325, 995, 995] is snow, which serves as the setting for the scene.</s>USER: What’s the object [400, 200, 900, 800]? ASSISTANT:
 2024-02-02 11:24:49 | INFO | gradio_web_server | The object [400, 200, 900, 800] is a white dog lying in the snow.
 2024-02-02 11:24:49 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:37:17 | INFO | stdout | Keyboard interruption in main thread... closing server.
+2024-02-02 15:37:59 | INFO | gradio_web_server | args: Namespace(host='0.0.0.0', port=None, controller_url='http://localhost:10000', concurrency_count=8, model_list_mode='reload', share=False, moderate=False, embed=False, add_region_feature=False)
+2024-02-02 15:37:59 | INFO | gradio_web_server | Models: []
+2024-02-02 15:37:59 | INFO | gradio_web_server | Namespace(host='0.0.0.0', port=None, controller_url='http://localhost:10000', concurrency_count=8, model_list_mode='reload', share=False, moderate=False, embed=False, add_region_feature=False)
+2024-02-02 15:37:59 | ERROR | stderr | /home/yochin/miniconda3/envs/ferret/lib/python3.10/site-packages/gradio/deprecation.py:43: UserWarning: You have unused kwarg parameters in Textbox, please remove them: {'container': False}
+2024-02-02 15:37:59 | ERROR | stderr |   warnings.warn(
+2024-02-02 15:38:00 | ERROR | stderr | /home/yochin/miniconda3/envs/ferret/lib/python3.10/site-packages/gradio/deprecation.py:43: UserWarning: You have unused kwarg parameters in Dropdown, please remove them: {'container': False}
+2024-02-02 15:38:00 | ERROR | stderr |   warnings.warn(
+2024-02-02 15:38:00 | INFO | stdout | Running on local URL:  http://0.0.0.0:7860
+2024-02-02 15:38:00 | INFO | stdout | 
+2024-02-02 15:38:00 | INFO | stdout | To create a public link, set `share=True` in `launch()`.
+2024-02-02 15:38:58 | ERROR | stderr | [33mWARNING[0m:  Invalid HTTP request received.
+2024-02-02 15:38:58 | ERROR | stderr | [33mWARNING[0m:  Invalid HTTP request received.
+2024-02-02 15:38:58 | ERROR | stderr | [33mWARNING[0m:  Invalid HTTP request received.
+2024-02-02 15:39:01 | INFO | gradio_web_server | load_demo. ip: 127.0.0.1
+2024-02-02 15:39:01 | INFO | gradio_web_server | Models: ['ferret-13b-v1.3']
+2024-02-02 15:39:15 | INFO | stdout | Init Uploading Images.
+2024-02-02 15:39:24 | INFO | gradio_web_server | add_text. ip: 127.0.0.1. len: 70
+2024-02-02 15:39:24 | INFO | stdout | No location, copy original image in add_text
+2024-02-02 15:39:24 | INFO | gradio_web_server | http_bot. ip: 127.0.0.1
+2024-02-02 15:39:24 | INFO | gradio_web_server | model_name: ferret-13b-v1.3, worker_addr: http://localhost:40000
+2024-02-02 15:39:24 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:39:24 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:39:24 | INFO | gradio_web_server | ==== request ====
+{'model': 'ferret-13b-v1.3', 'prompt': "A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. Follow instructions.  USER: <image>\nWhat's the relationship between object [region0] and object [region1]? ASSISTANT:", 'temperature': 0.2, 'top_p': 0.7, 'max_new_tokens': 512, 'stop': '</s>', 'images': "List of 1 images: ['46c4c809a7f524e0d1c3eee44d673eee']"}
+2024-02-02 15:39:24 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:39:24 | INFO | stdout | Input Prompt: A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. Follow instructions.  USER: <image>
+2024-02-02 15:39:24 | INFO | stdout | What's the relationship between object [region0] and object [region1]? ASSISTANT:
+2024-02-02 15:39:47 | INFO | gradio_web_server | Region [4, 364, 996, 993] showing snowy ground. Region [1, 355, 426, 561] showing white snow. The snow in the first region appears to be covering the ground, suggesting it's a snowy landscape. The snow in the second region is lighter, possibly signifying a change in the amount of snowfall or a shift in the weather.
+2024-02-02 15:39:47 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:40:02 | INFO | stdout | Keyboard interruption in main thread... closing server.
+2024-02-02 15:40:19 | INFO | gradio_web_server | args: Namespace(host='0.0.0.0', port=None, controller_url='http://localhost:10000', concurrency_count=8, model_list_mode='reload', share=False, moderate=False, embed=False, add_region_feature=True)
+2024-02-02 15:40:19 | INFO | gradio_web_server | Models: []
+2024-02-02 15:40:19 | INFO | gradio_web_server | Namespace(host='0.0.0.0', port=None, controller_url='http://localhost:10000', concurrency_count=8, model_list_mode='reload', share=False, moderate=False, embed=False, add_region_feature=True)
+2024-02-02 15:40:19 | ERROR | stderr | /home/yochin/miniconda3/envs/ferret/lib/python3.10/site-packages/gradio/deprecation.py:43: UserWarning: You have unused kwarg parameters in Textbox, please remove them: {'container': False}
+2024-02-02 15:40:19 | ERROR | stderr |   warnings.warn(
+2024-02-02 15:40:20 | ERROR | stderr | /home/yochin/miniconda3/envs/ferret/lib/python3.10/site-packages/gradio/deprecation.py:43: UserWarning: You have unused kwarg parameters in Dropdown, please remove them: {'container': False}
+2024-02-02 15:40:20 | ERROR | stderr |   warnings.warn(
+2024-02-02 15:40:20 | INFO | stdout | Running on local URL:  http://0.0.0.0:7860
+2024-02-02 15:40:20 | INFO | stdout | 
+2024-02-02 15:40:20 | INFO | stdout | To create a public link, set `share=True` in `launch()`.
+2024-02-02 15:40:42 | INFO | gradio_web_server | load_demo. ip: 127.0.0.1
+2024-02-02 15:40:42 | INFO | gradio_web_server | Models: []
+2024-02-02 15:41:28 | INFO | gradio_web_server | load_demo. ip: 127.0.0.1
+2024-02-02 15:41:28 | INFO | gradio_web_server | Models: ['ferret-13b-v1.3']
+2024-02-02 15:41:31 | INFO | stdout | Init Uploading Images.
+2024-02-02 15:41:39 | INFO | gradio_web_server | add_text. ip: 127.0.0.1. len: 70
+2024-02-02 15:41:39 | INFO | stdout | No location, copy original image in add_text
+2024-02-02 15:41:40 | INFO | gradio_web_server | http_bot. ip: 127.0.0.1
+2024-02-02 15:41:40 | INFO | gradio_web_server | model_name: ferret-13b-v1.3, worker_addr: http://localhost:40000
+2024-02-02 15:41:40 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:41:40 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:41:40 | INFO | gradio_web_server | ==== request ====
+{'model': 'ferret-13b-v1.3', 'prompt': "A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. Follow instructions.  USER: <image>\nWhat's the relationship between object [667, 464] <region_fea> and object [107, 460, 397, 787] <region_fea>? ASSISTANT:", 'temperature': 0.2, 'top_p': 0.7, 'max_new_tokens': 512, 'stop': '</s>', 'images': "List of 1 images: ['46c4c809a7f524e0d1c3eee44d673eee']"}
+2024-02-02 15:41:40 | INFO | gradio_web_server | ==== add region_masks_in_prompts to request ====
+
+2024-02-02 15:41:40 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:41:40 | INFO | stdout | Input Prompt: A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. Follow instructions.  USER: <image>
+2024-02-02 15:41:40 | INFO | stdout | What's the relationship between object [667, 464] <region_fea> and object [107, 460, 397, 787] <region_fea>? ASSISTANT:
+2024-02-02 15:43:36 | INFO | gradio_web_server | load_demo. ip: 127.0.0.1
+2024-02-02 15:43:36 | INFO | gradio_web_server | Models: ['ferret-13b-v1.3']
+2024-02-02 15:43:40 | INFO | stdout | Init Uploading Images.
+2024-02-02 15:43:47 | INFO | gradio_web_server | add_text. ip: 127.0.0.1. len: 70
+2024-02-02 15:43:47 | INFO | stdout | No location, copy original image in add_text
+2024-02-02 15:43:47 | INFO | gradio_web_server | http_bot. ip: 127.0.0.1
+2024-02-02 15:43:47 | INFO | gradio_web_server | model_name: ferret-13b-v1.3, worker_addr: http://localhost:40000
+2024-02-02 15:43:47 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:43:47 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:43:47 | INFO | gradio_web_server | ==== request ====
+{'model': 'ferret-13b-v1.3', 'prompt': "A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. Follow instructions.  USER: <image>\nWhat's the relationship between object [687, 498] <region_fea> and object [11, 458, 394, 718] <region_fea>? ASSISTANT:", 'temperature': 0.2, 'top_p': 0.7, 'max_new_tokens': 512, 'stop': '</s>', 'images': "List of 1 images: ['46c4c809a7f524e0d1c3eee44d673eee']"}
+2024-02-02 15:43:47 | INFO | gradio_web_server | ==== add region_masks_in_prompts to request ====
+
+2024-02-02 15:43:47 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:43:48 | INFO | stdout | Input Prompt: A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. Follow instructions.  USER: <image>
+2024-02-02 15:43:48 | INFO | stdout | What's the relationship between object [687, 498] <region_fea> and object [11, 458, 394, 718] <region_fea>? ASSISTANT:
+2024-02-02 15:46:00 | INFO | gradio_web_server | load_demo. ip: 127.0.0.1
+2024-02-02 15:46:00 | INFO | gradio_web_server | Models: ['ferret-13b-v1.3']
+2024-02-02 15:46:03 | INFO | stdout | Init Uploading Images.
+2024-02-02 15:46:09 | INFO | gradio_web_server | add_text. ip: 127.0.0.1. len: 70
+2024-02-02 15:46:09 | INFO | stdout | No location, copy original image in add_text
+2024-02-02 15:46:10 | INFO | gradio_web_server | http_bot. ip: 127.0.0.1
+2024-02-02 15:46:10 | INFO | gradio_web_server | model_name: ferret-13b-v1.3, worker_addr: http://localhost:40000
+2024-02-02 15:46:10 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:46:10 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:46:10 | INFO | gradio_web_server | ==== request ====
+{'model': 'ferret-13b-v1.3', 'prompt': "A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. Follow instructions.  USER: <image>\nWhat's the relationship between object [223, 630] <region_fea> and object [360, 212, 827, 797] <region_fea>? ASSISTANT:", 'temperature': 0.2, 'top_p': 0.7, 'max_new_tokens': 512, 'stop': '</s>', 'images': "List of 1 images: ['46c4c809a7f524e0d1c3eee44d673eee']"}
+2024-02-02 15:46:10 | INFO | gradio_web_server | ==== add region_masks_in_prompts to request ====
+
+2024-02-02 15:46:10 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:46:10 | INFO | stdout | Input Prompt: A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. Follow instructions.  USER: <image>
+2024-02-02 15:46:10 | INFO | stdout | What's the relationship between object [223, 630] <region_fea> and object [360, 212, 827, 797] <region_fea>? ASSISTANT:
+2024-02-02 15:48:05 | INFO | gradio_web_server | load_demo. ip: 127.0.0.1
+2024-02-02 15:48:05 | INFO | gradio_web_server | Models: ['ferret-7b-v1.3']
+2024-02-02 15:48:07 | INFO | stdout | Init Uploading Images.
+2024-02-02 15:48:14 | INFO | gradio_web_server | add_text. ip: 127.0.0.1. len: 70
+2024-02-02 15:48:14 | INFO | stdout | No location, copy original image in add_text
+2024-02-02 15:48:14 | INFO | gradio_web_server | http_bot. ip: 127.0.0.1
+2024-02-02 15:48:14 | INFO | gradio_web_server | model_name: ferret-7b-v1.3, worker_addr: http://localhost:40000
+2024-02-02 15:48:14 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:48:14 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:48:14 | INFO | gradio_web_server | ==== request ====
+{'model': 'ferret-7b-v1.3', 'prompt': "A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. Follow instructions.  USER: <image>\nWhat's the relationship between object [215, 651] <region_fea> and object [345, 200, 886, 901] <region_fea>? ASSISTANT:", 'temperature': 0.2, 'top_p': 0.7, 'max_new_tokens': 512, 'stop': '</s>', 'images': "List of 1 images: ['46c4c809a7f524e0d1c3eee44d673eee']"}
+2024-02-02 15:48:14 | INFO | gradio_web_server | ==== add region_masks_in_prompts to request ====
+
+2024-02-02 15:48:14 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 15:48:14 | INFO | stdout | Input Prompt: A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0, 0], bottom-right [width-1, height-1]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1000x1000. Follow instructions.  USER: <image>
+2024-02-02 15:48:14 | INFO | stdout | What's the relationship between object [215, 651] <region_fea> and object [345, 200, 886, 901] <region_fea>? ASSISTANT:
+2024-02-02 15:48:29 | INFO | gradio_web_server | The objects [54, 472, 512, 743] and [345, 200, 886, 901] are a snake and a dog, respectively. From their proximity and the way they're positioned, it's clear that the snake and the dog are in a friendly manner, with the snake coiling around the dog's neck. The dog is lying down in the snow, and the snake is resting on the dog's body, suggesting a trusting and friendly relationship between them.
+2024-02-02 15:48:29 | INFO | stdout | Input Image Size:(697, 465)
+2024-02-02 16:32:51 | INFO | stdout | Keyboard interruption in main thread... closing server.

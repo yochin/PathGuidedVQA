@@ -18,6 +18,10 @@ def parse_args():
      parser.add_argument(
          '--db-dir', metavar='DIRECTORY', required=True,
          help='directory which contains images and object properties')
+     
+     parser.add_argument(
+         '--model-name', default = None, required=True,
+         help='model name')
 
      # lora 사용시에는 llava-model-base-dir이 있어야함
      # ex) llava-v1.5-7b-lora 사용시 base model은 llava-v1.5-7b, model은 llava-v1.5-7b-lora
@@ -105,7 +109,7 @@ def main():
     if return_as_bbox:
         assert num_cropped_image == 1
 
-    lvm = LargeMultimodalModels('llava', llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path)
+    lvm = LargeMultimodalModels(args.model_name, llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path)
 
 
     choose_one_random_gp = True     # select one random gp when many gps are detected
@@ -131,7 +135,8 @@ def main():
 
     # 이미지 파일들만 필터링
     image_files = [f for f in files if f.endswith(('.png', '.jpg', '.jpeg'))]
-    sorted(image_files)
+    image_files.sort()  # return itself
+    print(image_files)
 
     # 0. Definition
     # list_goal_names = ['stairs', 'door', 'elevator']
