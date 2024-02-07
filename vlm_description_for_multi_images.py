@@ -2,8 +2,8 @@ import openai
 import base64
 # from llava15.eval.run_llava import init_llava15_model, run_llava15_model
 from llava.eval.run_llava import init_llava16_model, run_llava16_model
-
 from transformers import set_seed
+from prompt_library import get_prompt
 import pdb
 
 
@@ -42,29 +42,6 @@ class LargeMultimodalModels():
             self.ferret_model_path = ferret_model_path
         
 
-    def describe_images_with_boxes(self, image_path, bboxes, goal_label_cxcy, order, num_total, merge=False, previous_descriptions=[]):
-        print('\nimage_path:', image_path)
-        print('bboxes:', bboxes)
-        print('goal_label_cxcy:', goal_label_cxcy)
-        print('order:', order)
-        print('num_total:', num_total)
-        print('merge:', merge)
-        print('previous_descriptions:', previous_descriptions)
-
-        res_answer = ''
-        res_query = ''
-
-        if self.model_name == 'dummy':
-            res_answer = self.describe_all_bboxes_with_dummy()
-        elif self.model_name in ['llava']:
-            res_query, res_answer = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, order, num_total, merge, previous_descriptions)
-        elif self.model_name == 'chatgpt':
-            res_answer = self.describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy)
-        else:
-            raise AssertionError(f'{self.model_name} is not supported!')
-        
-        return res_query, res_answer
-    
     def describe_whole_images_with_boxes(self, image_path, bboxes, goal_label_cxcy, step_by_step=False):
         print('\nimage_path:', image_path)
         print('bboxes:', bboxes)
@@ -76,7 +53,7 @@ class LargeMultimodalModels():
         if self.model_name == 'dummy':
             res_answer = self.describe_all_bboxes_with_dummy()
         elif self.model_name in ['llava', 'ferret', 'llava16']:
-            res_query, res_answer = self.describe_all_bboxes_with_llava_ferret_in_whole_image(image_path, bboxes, goal_label_cxcy, step_by_step, self.model_name)
+            res_query, res_answer = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, step_by_step, self.model_name)
         elif self.model_name == 'chatgpt':
             res_answer = self.describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy)
         else:
@@ -138,196 +115,14 @@ class LargeMultimodalModels():
 
         return answer
 
-
-    def order_to_str(self, order):
-        # if order == 1:
-        #     str_order = 'first'
-        # elif order == 2:
-        #     str_order = 'second'
-        # elif order == 3:
-        #     str_order = 'third'
-
-        if order == 1:
-            str_order = 'a starting point'
-        elif order == 2:
-            str_order = 'a midpoint'
-        elif order == 3:
-            str_order = 'a destination'
-        else:
-            raise AssertionError('Not implemented')
-        
-        return str_order
     
-
-    def num_to_str(self, num_total):
-        if num_total == 1:
-            raise AssertionError('Not implemented')
-        elif num_total == 2:
-            str_num_total = 'two'
-        elif num_total == 3:
-            str_num_total = 'three'
-        else:
-            raise AssertionError('Not implemented')
-        
-        return str_num_total
-    
-
-    def describe_all_bboxes_with_llava(self, image_path, bboxes, goal_label_cxcy, order, num_total, merge=False, previous_descriptions=[]):
-
-        # 각 바운딩 박스에 대한 설명 구성
-        bbox_descriptions = [f"{label} at ({round(x_min, 2)}, {round(y_min, 2)}, {round(x_max, 2)}, {round(y_max, 2)})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
-        bbox_list_str = ", ".join(bbox_descriptions)
-        goal_label, goal_cxcy = goal_label_cxcy
-        dest_descriptions = f"{goal_label} at ({round(goal_cxcy[0], 2)}, {round(goal_cxcy[1], 2)})"
-
-        str_order = self.order_to_str(order)
-        str_num_total = self.num_to_str(num_total)
-        
-        if merge:
-            previous_prompt = []
-            
-            if len(previous_descriptions) == 3:
-                previous_prompt.append('The description at a starting point is that ')
-                previous_prompt.append(previous_descriptions[0])
-                previous_prompt.append(' ')
-                                
-                previous_prompt.append('The description at a midpoint is that ')
-                previous_prompt.append(previous_descriptions[1])
-                previous_prompt.append(' ')
-
-                previous_prompt.append('The description at a destination is that ')
-                previous_prompt.append(previous_descriptions[2])
-                previous_prompt.append(' ')
-
-                previous_prompt = ' '.join(previous_prompt)
-
-
-            else:
-                raise AssertionError('Not implemented')
-
-            # # 프롬프트 구성
-            # prompt = (  f"[Context: The input image is whole image of the route to the destination. "
-            #             "The input image depicts the view from a pedestrian's position, " 
-            #             "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
-            #             "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
-            #             "Consider the starting point as the ground where the user is standing.]\n" 
-            #             f"[Obstacle Name at (bounding box): [{bbox_list_str}].]\n"
-            #             f"[Destination Name at (point): [{dest_descriptions}].]\n"
-            #             f"{previous_prompt}"
-            #             "Describe the obstacles to the destination in a natural and simple way "
-            #             "for a visually impaired person as a navigation assistant in 3 sentences. "
-            #             "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
-
-            prompt = (  f"[Context: The input image depicts the view from a pedestrian's position, " 
-                        "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
-                        "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
-                        "Consider the starting point as the ground where the user is standing.]\n" 
-                        f"[Obstacle Name at (bounding box): [{bbox_list_str}].]\n"
-                        f"[Destination Name at (point): [{dest_descriptions}].]\n"
-                        f"{previous_prompt}"
-                        "Describe the obstacles to the destination in a natural and simple way "
-                        "for a visually impaired person as a navigation assistant in 3 sentences. "
-                        "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
-        else:
-            # 프롬프트 구성
-            # prompt = (  f"[Context: The input image is the {str_order} of {str_num_total} images of the route to the destination. "
-            #             "The input image depicts the view from a pedestrian's position, " 
-            #             "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
-            #             "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
-            #             "Consider the starting point as the ground where the user is standing.]\n" 
-            #             f"[Obstacle Name at (bounding box): [{bbox_list_str}].]\n"
-            #             f"[Destination Name at (point): [{dest_descriptions}].]\n"
-            #             "Describe the obstacles to the destination in a natural and simple way "
-            #             "for a visually impaired person as a navigation assistant in 3 sentences. "
-            #             "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
-
-            prompt = (  f"[Context: The input image is taken at {str_order} on the route to the destination. "
-                        "The input image depicts the view from a pedestrian's position, " 
-                        "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
-                        "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
-                        "Consider the starting point as the ground where the user is standing.]\n" 
-                        f"[Obstacle Name at (bounding box): [{bbox_list_str}].]\n"
-                        f"[Destination Name at (point): [{dest_descriptions}].]\n"
-                        "Describe the obstacles to the destination in a natural and simple way "
-                        "for a visually impaired person as a navigation assistant in 3 sentences. "
-                        "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
-        
-
-        # llm_args = type('Args', (), {
-        #     "model_path": llava_model_path,
-        #     "model_base": llava_model_base_path,
-        #     "model_name": get_model_name_from_path(llava_model_path),
-        #     "query": prompt,
-        #     "conv_mode": None,
-        #     "image_file": image_path,
-        #     "sep": ",",
-        #     "temperature": 0,
-        #     "top_p": None,
-        #     "num_beams": 1,
-        #     "max_new_tokens": 512
-        # })()
-        # res_answer = eval_model(llm_args)
-        res_answer = run_llava_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
-                                     input_query=prompt, image_files=image_path, input_conv_mode=None, input_temperature=input_temperature, input_top_p=None, input_num_beams=1, input_max_new_tokens=512, model_name=self.llava_model_name)
-
-
-
-        # print('query: ', prompt)
-        # print('answer: ', res_answer)
-
-        return prompt, res_answer
-    
-
-    def describe_all_bboxes_with_llava_ferret_in_whole_image(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, model_name=None):
+    def describe_all_bboxes_with_llava(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, model_name=None):
         set_seed(42)
         input_temperature = 0.6
         input_top_p = 0.9
 
-        # 각 바운딩 박스에 대한 설명 구성
-        # bbox_descriptions = [f"{label} at ({round(x_min, 2)}, {round(y_min, 2)}, {round(x_max, 2)}, {round(y_max, 2)})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
-        bbox_descriptions = [f"{label} [{round(x_min, 2)}, {round(y_min, 2)}, {round(x_max, 2)}, {round(y_max, 2)}]" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
-        bbox_list_str = ", ".join(bbox_descriptions)
-        goal_label, goal_cxcy = goal_label_cxcy
-
-        if len(goal_cxcy) == 2:     # point
-            # dest_descriptions = f"{goal_label} at ({round(goal_cxcy[0], 2)}, {round(goal_cxcy[1], 2)})"
-            dest_descriptions = f"{goal_label} [{round(goal_cxcy[0], 2)}, {round(goal_cxcy[1], 2)}]"
-        elif len(goal_cxcy) == 4:   # bbox
-            dest_descriptions = f"{goal_label} [{round(goal_cxcy[0], 2)}, {round(goal_cxcy[1], 2)}, {round(goal_cxcy[2], 2)}, {round(goal_cxcy[3], 2)}]"
-        else:
-            raise AssertionError('check ', goal_cxcy)
-
-        # "A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions. USER: <image>\n"
-        # ours beloow prompt
-        # "ASSISTANT:"
-
         if step_by_step:
-            list_prompt = []
-            # if len(bboxes) > 0:
-            #     list_prompt.append((
-            #             "The image contains the following objects, which are located within bounding boxes represented by four numbers. "
-            #             "These four numbers correspond to the normalized pixel values for left, top, right, and bottom. "
-            #             f"The included objects are {bbox_list_str}.\n"
-            #             'Describe the overall photo from near to far.'
-            #             ))
-            # else:
-            #     list_prompt.append('Describe the overall photo from near to far.')
-            # list_prompt.append(f'Explain the path to the {dest_descriptions}, which is the current destination.')
-            # list_prompt.append('Explain the obstacles that exist on the path, and tell us what to do to get the destination.')
-
-            list_prompt.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
-            if len(bboxes) > 0:
-                list_prompt.append((f"The image contains the following objects, {bbox_list_str}.\n"))
-            list_prompt.append(f'After describing the overall photo from near to far, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path.')
-            list_prompt = [' '.join(list_prompt)]
-
-            # list_prompt.append('Summarize the path in 3 lines.')
-
-            list_prompt.append(('Summarize the answer in 3 lines. '
-                                'The first line summarizes the path to the destination using direction and distance. '
-                                'The second line describes objects along the path. '
-                                'In the third line, decide whether to go or stop depending on the situation and explain the reason.')
-            )
+            list_prompt = get_prompt(goal_label_cxcy, bboxes, trial_num=18)
 
             list_answer = []
             for i_prompt, prompt in enumerate(list_prompt):
@@ -357,33 +152,34 @@ class LargeMultimodalModels():
 
             # print(res_answer)
         else:
-            if len(bboxes) == 0:
-                prompt = (f"After explaining the overall photo from near to far, explain the path to the {goal_label}, which is the current destination, "
-                        "explain the obstacles that exist on the path, and tell us what to do. ")
-            else:
-                if len(goal_cxcy) == 2:
-                    prompt = (
-                        "The image contains the following objects, which are located within bounding boxes represented by four numbers. "
-                        f"These four numbers correspond to the normalized pixel values for left, top, right, and bottom. The included objects are {bbox_list_str}.\n"
-                        f"After explaining the overall photo from near to far, explain the path to the {dest_descriptions}, which is the current destination and the two numbers represent the normalized horizontal and vertical axis values of the image.\n"
-                        "Explain the obstacles that exist on the path, and tell us what to do. "
-                    )
+            raise AssertionError('No more supported')
+            # if len(bboxes) == 0:
+            #     prompt = (f"After explaining the overall photo from near to far, explain the path to the {goal_label}, which is the current destination, "
+            #             "explain the obstacles that exist on the path, and tell us what to do. ")
+            # else:
+            #     if len(goal_cxcy) == 2:
+            #         prompt = (
+            #             "The image contains the following objects, which are located within bounding boxes represented by four numbers. "
+            #             f"These four numbers correspond to the normalized pixel values for left, top, right, and bottom. The included objects are {bbox_list_str}.\n"
+            #             f"After explaining the overall photo from near to far, explain the path to the {dest_descriptions}, which is the current destination and the two numbers represent the normalized horizontal and vertical axis values of the image.\n"
+            #             "Explain the obstacles that exist on the path, and tell us what to do. "
+            #         )
 
-                    assert step_by_step == False
-                elif len(goal_cxcy) == 4:
-                    prompt = (
-                        "The image contains the following objects, which are located within bounding boxes represented by four numbers. "
-                        f"These four numbers correspond to the normalized pixel values for left, top, right, and bottom. The included objects are {bbox_list_str}.\n"
-                        f"After explaining the overall photo from near to far, explain the path to the {dest_descriptions}, which is the current destination, "
-                        "explain the obstacles that exist on the path, and tell us what to do. "
-                    )
+            #         assert step_by_step == False
+            #     elif len(goal_cxcy) == 4:
+            #         prompt = (
+            #             "The image contains the following objects, which are located within bounding boxes represented by four numbers. "
+            #             f"These four numbers correspond to the normalized pixel values for left, top, right, and bottom. The included objects are {bbox_list_str}.\n"
+            #             f"After explaining the overall photo from near to far, explain the path to the {dest_descriptions}, which is the current destination, "
+            #             "explain the obstacles that exist on the path, and tell us what to do. "
+            #         )
                 
-            if model_name == 'llava':
-                res_answer = run_llava_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
-                                            input_query=prompt, image_files=image_path, input_conv_mode=None, input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1, 
-                                            input_max_new_tokens=512, model_name=self.llava_model_name)
-            elif model_name == 'ferret':
-                    pdb.set_trace()
+            # if model_name == 'llava':
+            #     res_answer = run_llava_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
+            #                                 input_query=prompt, image_files=image_path, input_conv_mode=None, input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1, 
+            #                                 input_max_new_tokens=512, model_name=self.llava_model_name)
+            # elif model_name == 'ferret':
+            #         pdb.set_trace()
 
         # print('query: ', prompt)
         # print('answer: ', res_answer)
