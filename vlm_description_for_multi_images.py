@@ -1,6 +1,5 @@
 import openai
 import base64
-# from llava15.eval.run_llava import init_llava15_model, run_llava15_model
 from llava.eval.run_llava import init_llava16_model, run_llava16_model
 from llava.serve.cli import run_llava16_model_cli
 from llava.conversation import conv_templates
@@ -41,9 +40,8 @@ class LargeMultimodalModels():
                                                     input_conv_mode=None)
                 print('@LargeMultimodalModels - init_llava16_model: ', self.llava_model_name)
             else:
-                self.llava_tokenizer, self.llava_model, self.llava_image_processor, \
-                self.llava_context_len, self.llava_model_name = init_llava15_model(model_path=self.llava_model_path,
-                                                                                model_base=self.llava_model_base_path)
+                raise AssertionError('check the model: ', self.model_name)
+            
         # for ferret
         elif self.model_name == 'ferret':
             self.ferret_model_path = ferret_model_path
@@ -177,16 +175,12 @@ class LargeMultimodalModels():
                                             conv.roles[1], '\n', list_answer[i_prompt-1], '\n', 
                                             conv.roles[0], '\n', prompt])
 
-                    if model_name == 'llava':
-                        answer = run_llava15_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
-                                                input_query=in_prompt, image_files=image_path, input_conv_mode=None, input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1, 
-                                                input_max_new_tokens=512, model_name=self.llava_model_name)
-                    elif model_name == 'llava16':
+                    if model_name == 'llava16':
                         answer = run_llava16_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
                                                 input_query=in_prompt, image_files=image_path, input_conv_mode=self.input_conv_mode, input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1, 
                                                 input_max_new_tokens=512, model_name=self.llava_model_name)
-                    elif model_name == 'ferret':
-                        pdb.set_trace()
+                    else:
+                        raise AssertionError('check the model: ', model_name)
 
                     list_answer.append(answer)
 
