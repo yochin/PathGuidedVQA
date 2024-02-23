@@ -128,7 +128,7 @@ def eval_model(args):
     return outputs
 
 
-def init_llava16_model(model_path, model_base):
+def init_llava16_model(model_path, model_base, input_conv_mode=None):
     # Model
     disable_torch_init()
 
@@ -137,7 +137,29 @@ def init_llava16_model(model_path, model_base):
         model_path, model_base, model_name
     )
 
-    return tokenizer, model, image_processor, context_len, model_name
+    if "llama-2" in model_name.lower():
+        conv_mode = "llava_llama_2"
+    elif "mistral" in model_name.lower():
+        conv_mode = "mistral_instruct"
+    elif "v1.6-34b" in model_name.lower():
+        conv_mode = "chatml_direct"
+    elif "v1" in model_name.lower():
+        conv_mode = "llava_v1"
+    elif "mpt" in model_name.lower():
+        conv_mode = "mpt"
+    else:
+        conv_mode = "llava_v0"
+
+    if input_conv_mode is not None and conv_mode != input_conv_mode:
+        print(
+            "[WARNING] the auto inferred conversation mode is {}, while `--conv-mode` is {}, using {}".format(
+                conv_mode, input_conv_mode, input_conv_mode
+            )
+        )
+    else:
+        input_conv_mode = conv_mode
+
+    return tokenizer, model, image_processor, context_len, model_name, input_conv_mode
 
 
 def run_llava16_model(tokenizer, model, image_processor, context_len, input_query, image_files, input_conv_mode, input_temperature, input_top_p, input_num_beams, input_max_new_tokens, model_name):
@@ -162,28 +184,6 @@ def run_llava16_model(tokenizer, model, image_processor, context_len, input_quer
             qs = image_token_se + "\n" + qs
         else:
             qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
-
-    if "llama-2" in model_name.lower():
-        conv_mode = "llava_llama_2"
-    elif "mistral" in model_name.lower():
-        conv_mode = "mistral_instruct"
-    elif "v1.6-34b" in model_name.lower():
-        conv_mode = "chatml_direct"
-    elif "v1" in model_name.lower():
-        conv_mode = "llava_v1"
-    elif "mpt" in model_name.lower():
-        conv_mode = "mpt"
-    else:
-        conv_mode = "llava_v0"
-
-    if input_conv_mode is not None and conv_mode != input_conv_mode:
-        print(
-            "[WARNING] the auto inferred conversation mode is {}, while `--conv-mode` is {}, using {}".format(
-                conv_mode, input_conv_mode, input_conv_mode
-            )
-        )
-    else:
-        input_conv_mode = conv_mode
 
     conv = conv_templates[input_conv_mode].copy()       # reset the conversation by copying from templates
     conv.append_message(conv.roles[0], qs)

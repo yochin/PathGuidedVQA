@@ -35,6 +35,10 @@ def parse_args():
      parser.add_argument(
          '--output', metavar='DIRECTORY', required=True,
          help='directory for output ')
+     
+     parser.add_argument(
+         '--ex-dir', metavar='DIRECTORY', default=None,
+         help='directory which contains examples')
 
      return parser.parse_args()
 
@@ -79,19 +83,66 @@ def draw_long_text(draw, position=(0,0), text='blank', fill='white', font=None, 
         y += (ty2 - ty1)
 
 
+def load_examples(path_to_base):
+    path_to_images = os.path.join(path_to_base, 'images')
+    path_to_prompt = os.path.join(path_to_base, 'prompt')
+
+
+    files = os.listdir(path_to_images)
+
+    # 이미지 파일들만 필터링
+    list_images = [f for f in files if f.endswith(('.png', '.jpg', '.jpeg'))]
+    list_images.sort()  # return itself
+
+    list_prompt_ex = []
+    for filename in list_images:
+        filename_txt = os.path.splitext(filename)[0] + '.txt'
+        answer_prompt = read_text(os.path.join(path_to_prompt, filename_txt))
+
+        long_prompt = []
+
+        for i_th in range(0, len(answer_prompt), 2):
+            long_prompt.append(answer_prompt[i_th])
+
+        list_prompt_ex.append(long_prompt)
+
+            # f'{role_user}{answer_prompt[0]}\n<image-placeholder>\n{role_asst}{answer_prompt[2]}\n' 
+            # f'{role_user}{answer_prompt[4]}\n{role_asst}{answer_prompt[6]}\n'
+            # f'{role_user}{answer_prompt[8]}\n{role_asst}{answer_prompt[10]}\n'
+            # f'{role_user}{answer_prompt[12]}\n{role_asst}{answer_prompt[14]}')
+
+    list_images = [os.path.join(path_to_images, f) for f in list_images]
+
+    return list_images, list_prompt_ex
+
+
+
 # Assisted by ChatGPT 4
 def main():
     args = parse_args()
 
     # 이미지가 저장된 폴더 경로
     image_path = os.path.join(args.db_dir, 'images')
-    # anno_path1 = os.path.join(args.db_dir, 'anno_aihub')
-    anno_path1 = os.path.join(args.db_dir, 'gdDB_with_aihub_labels_using_yolo_detector_train958', 'pred_pascal')
-    # anno_path2 = os.path.join(args.db_dir, 'anno_toomuch')
+
+    anno_path1 = os.path.join(args.db_dir, 'det_anno_pred')
+    # anno_path2 = os.path.join(args.db_dir, 'det_anno_toomuch')
     anno_path2 = None
-    anno_path_gt = os.path.join(args.db_dir, 'anno_gt')
-    label_path_gt = os.path.join(args.db_dir, 'default_labels.txt')
+    anno_path_gt = os.path.join(args.db_dir, 'det_anno_gt')
+
     label_path_removal = os.path.join(args.db_dir, 'removal_labels.txt')
+    label_path_gp = os.path.join(args.db_dir, 'gp_labels.txt')
+    anno_path_gp = os.path.join(args.db_dir, 'anno')
+
+    use_gp = 'anno'
+    if not os.path.exists(label_path_gp):
+        assert os.path.exists(anno_path_gp)
+        use_gp = 'anno'
+
+    if not os.path.exists(anno_path_gp):
+        assert os.path.exists(label_path_gp)
+        use_gp = 'det'
+    
+
     llava_model_base_path = args.llava_model_base_dir
     llava_model_path = args.llava_model_dir
     output_path = args.output
@@ -102,20 +153,25 @@ def main():
     # option: detection info
     use_det_info = True
 
-    lvm = LargeMultimodalModels(args.model_name, llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path)
+    # option: give examples
+    if args.ex_dir is not None:
+        example_path = os.path.join(args.ex_dir)
+        print(f'@main - example_path is given: {example_path}')
 
+        list_ex_images, list_ex_prompt = load_examples(example_path)
+    else:
+        list_ex_images = [] 
+        list_ex_prompt = []
+
+    lvm = LargeMultimodalModels(args.model_name, llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path)
 
     choose_one_random_gp = True     # select one random gp when many gps are detected
 
     assert choose_one_random_gp     # treat the output filename related to several gps
 
     # related to output
-    output_path_subimage = os.path.join(output_path, 'sub_images')
     output_path_qa = os.path.join(output_path, 'qa')
     output_path_debug = os.path.join(output_path, 'debug')
-
-    if not os.path.exists(output_path_subimage):
-        os.makedirs(output_path_subimage)
 
     if not os.path.exists(output_path_qa):
         os.makedirs(output_path_qa)
@@ -129,54 +185,33 @@ def main():
     # 이미지 파일들만 필터링
     image_files = [f for f in files if f.endswith(('.png', '.jpg', '.jpeg'))]
     image_files.sort()  # return itself
-    print(image_files)
 
-    # 0. Definition
-    # list_goal_names = ['stairs', 'door', 'elevator']
-    list_goal_names = read_text(label_path_gt)
-    print('list_goal_names: ', list_goal_names)
-
+    # 0. Definition    
+    if use_gp == 'det':
+        list_goal_names = read_text(label_path_gp)
+        print('@main - list_goal_names: ', list_goal_names)
+    
     # 각 이미지 파일에 대해
     for img_file in image_files:
         # 이미지 파일의 전체 경로
         img_path = os.path.join(image_path, img_file)
-        print('==============================\n')
-        print(f'processing {img_path}...')
-        # XML 파일의 전체 경로 (파일 이름은 같지만 확장자만 xml로 변경)
-        xml_path1 = os.path.join(anno_path1, os.path.splitext(img_file)[0] + '.xml')
-        if anno_path2 is not None:
-            xml_path2 = os.path.join(anno_path2, os.path.splitext(img_file)[0] + '.xml')
-        xml_path_gt = os.path.join(anno_path_gt, os.path.splitext(img_file)[0] + '.xml')
-
         img_file_wo_ext = os.path.splitext(img_file)[0]
+        print('==============================\n')
+        print(f'@main - processing {img_path}...')
+        # XML 파일의 전체 경로 (파일 이름은 같지만 확장자만 xml로 변경)
+        xml_path1 = os.path.join(anno_path1, img_file_wo_ext + '.xml')
+        if anno_path2 is not None:
+            xml_path2 = os.path.join(anno_path2, img_file_wo_ext + '.xml')
+        xml_path_gt = os.path.join(anno_path_gt, img_file_wo_ext + '.xml')
+
+        
         
 
         # 이미지를 열고
         img = Image.open(img_path)
-        # draw = ImageDraw.Draw(img)
-        # font = ImageFont.truetype('arial.ttf', size=40)
-
-        # # XML 파일을 파싱하여 Bounding Box 정보를 가져옴
-        # bboxes1 = read_anno(xml_path1) # list of [label_name, [x_min, y_min, x_max, y_max], score]
-        # bboxes2 = read_anno(xml_path2)
-        # bboxes = bboxes1
-        # bboxes.extend(bboxes2)
-
-        # for label_name, bbox, score in bboxes:
-        #     # Bounding Box를 이미지에 그림
-        #     draw.rectangle(bbox, outline='yellow', width=2)
-        #     draw.text(bbox[:2], label_name, fill='white', font=font)
-
-        # # 이미지 및 Bounding Box 표시
-        # plt.imshow(img)
-        # plt.axis('off')
-        # plt.title(img_file)
-        # plt.show()
-
         whole_width, whole_height = img.size
 
-        # 1. Split input images into cropped images along with the goal path (yochin)
-        # 1.1. read annotation and convert into bboxes with label info.
+        # 1. read annotation and convert into bboxes with label info.
         # XML 파일을 파싱하여 Bounding Box 정보를 가져옴 (if rescaling to 0 ~ 1)
         bboxes1 = read_anno(xml_path1, rescaling=True, filtering_score=0.7) # list of [label_name, [x_min, y_min, x_max, y_max], score]
         bboxes = bboxes1
@@ -192,26 +227,45 @@ def main():
         list_labels_removal = read_text(label_path_removal)
         bboxes = [item for item in bboxes if item[0] not in list_labels_removal]
 
+        # 2. set goal position
+        if use_gp == 'det':
+            list_labels_gps = get_gp(bboxes, list_goal_names, return_as_bbox=return_as_bbox)  # list of [label_name, [cx, cy]]
 
-        # 1.2. set goal position
-        list_labels_gps = get_gp(bboxes, list_goal_names, return_as_bbox=return_as_bbox)  # list of [label_name, [cx, cy]]
-
-        if choose_one_random_gp:
-            list_labels_gps = [random.choice(list_labels_gps)]
+            if choose_one_random_gp:
+                list_labels_gps = [random.choice(list_labels_gps)]
+        else:
+            with open(os.path.join(anno_path_gp, img_file_wo_ext + '.txt')) as fid:
+                lines = fid.read().splitlines()
+            cx, cy = lines[0].split(' ')
+            cx = float(cx) / whole_width
+            cy = float(cy) / whole_height
+            list_labels_gps = [['point', [cx, cy]]]
                 
         list_queries = []
         list_descriptions = []
 
-        # 1.3. split images into sub-images
+        # 3. for each gp in one image
         for i_gp, goal_label_cxcy in enumerate(list_labels_gps):
-            print('the goal info:', goal_label_cxcy)
+            print('@main - the goal info:', goal_label_cxcy)
 
             goal_label, goal_cxcy = goal_label_cxcy
 
             if use_det_info is False:
                 bboxes = []
 
-            final_query, final_description = lvm.describe_whole_images_with_boxes([img_path], bboxes, goal_label_cxcy, step_by_step=True)
+            
+            if len(list_ex_images) > 0:
+                list_img_path = [item for item in list_ex_images]
+                list_img_path.append(img_path)
+
+                list_example_prompt = list_ex_prompt
+            else:
+                list_img_path = [img_path]
+                list_example_prompt = []
+
+            final_query, final_description = lvm.describe_whole_images_with_boxes(list_img_path, bboxes, goal_label_cxcy, 
+                                                                                  step_by_step=True, 
+                                                                                  list_example_prompt=list_example_prompt)
 
             output_dict = {
                 'image_filename': img_file,

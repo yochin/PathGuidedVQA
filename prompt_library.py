@@ -1,4 +1,4 @@
-def get_prompt(goal_label_cxcy, bboxes, trial_num):
+def get_prompt(goal_label_cxcy, bboxes, trial_num, sep_system=False):
     # 각 바운딩 박스에 대한 설명 구성
     # bbox_descriptions = [f"{label} at ({round(x_min, 2)}, {round(y_min, 2)}, {round(x_max, 2)}, {round(y_max, 2)})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
     bbox_descriptions = [f"{label} [{round(x_min, 2)}, {round(y_min, 2)}, {round(x_max, 2)}, {round(y_max, 2)}]" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
@@ -15,6 +15,7 @@ def get_prompt(goal_label_cxcy, bboxes, trial_num):
 
 
     list_prompt = []
+    list_system = []
     if trial_num < 15:
         if len(bboxes) > 0:
             list_prompt.append((
@@ -86,11 +87,19 @@ def get_prompt(goal_label_cxcy, bboxes, trial_num):
         list_prompt.append('Enumerate the obstacles along the path with its relative position to the bottom-center point of the image. ')
         list_prompt.append('Select GO or STOP. Then explain the reason in 1 line. ')
     elif trial_num == 18:
-        list_prompt.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
-        list_prompt.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
-                            "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
-                            "Consider the starting point as the ground where the user is standing.]\n"
-                            )
+        if sep_system:
+            list_system.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_system.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing.\n"
+                                )
+            list_system = [' '.join(list_system)]
+        else:
+            list_prompt.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_prompt.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing.\n"
+                                )
         if len(bboxes) > 0:
             list_prompt.append((f"The image contains obstacles, {bbox_list_str}.\n"))
         list_prompt.append(f'After describing the overall photo from near to far, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path.')
@@ -101,7 +110,151 @@ def get_prompt(goal_label_cxcy, bboxes, trial_num):
         list_prompt.append('Summarize the path to the destination using direction and distance in 1 line. ')
         list_prompt.append('Enumerate the obstacles only on the path with its relative position to the bottom-center point of the image. ')
         list_prompt.append('Select GO or STOP. Then explain the reason in 1 line. ')
+    
+    elif trial_num == 21:
+        if sep_system:
+            list_system.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_system.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing. "
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. \n"
+                                )
+            list_system = [' '.join(list_system)]
+        else:
+            list_prompt.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_prompt.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing. "
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. \n"
+                                )
+        list_prompt.append('From now on, we will talk about the new image. ')
+        if len(bboxes) > 0:
+            list_prompt.append((f"The image contains obstacles, {bbox_list_str}.\n"))
+        list_prompt.append(f'After describing the overall photo from near to far, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path.')
+        list_prompt = [' '.join(list_prompt)]
+
+        # Summarize prompt
+        list_prompt.append('Summarize the path to the destination using direction and distance in 1 line. ')
+        list_prompt.append('Enumerate the obstacles only on the path with its relative position to the bottom-center point of the image. ')
+        list_prompt.append('Select GO or STOP. Then explain the reason in 1 line. ')
+
+    elif trial_num == 30:
+        if sep_system:
+            list_system.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_system.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing. "
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. \n"
+                                )
+            list_system = [' '.join(list_system)]
+        else:
+            list_prompt.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_prompt.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing. "
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. \n"
+                                )
+        list_prompt.append('From now on, we will talk about the new image. ')
+        if len(bboxes) > 0:
+            list_prompt.append((f"The image contains obstacles, {bbox_list_str}.\n"))
+        list_prompt.append(f'After describing the overall photo from near to far, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path.')
+        list_prompt = [' '.join(list_prompt)]
+
+        # Summarize prompt
+        list_prompt.append('Summarize the path to the destination using direction and distance in 1 line. ')
+        list_prompt.append('Select GO or STOP. Then explain the reason in 1 line. ')
+
+    elif trial_num == 22:
+        if sep_system:
+            list_system.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_system.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing. "
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. \n"
+                                )
+            list_system = [' '.join(list_system)]
+        else:
+            list_prompt.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_prompt.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing. "
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. \n"
+                                )
+        if len(bboxes) > 0:
+            list_prompt.append((f"The image contains obstacles, {bbox_list_str}.\n"))
+        list_prompt.append(f'After describing the overall photo from near to far, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path.')
+        list_prompt = [' '.join(list_prompt)]
+
+        # Summarize prompt
+        list_prompt.append('Summarize the path to the destination using direction and distance in 1 line. ')
+        list_prompt.append('Enumerate the obstacles only on the path with its relative position to the bottom-center point of the image. ')
+        list_prompt.append('Select GO or STOP. Then explain the reason in 1 line. ')
+        
+    elif trial_num == 19:   # one-turn query
+        if sep_system:
+            list_system.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_system.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing. "
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property.\n"
+                                )
+            list_system = [' '.join(list_system)]
+        else:
+            list_prompt.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_prompt.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing. "
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property.\n"
+                                )
+        if len(bboxes) > 0:
+            list_prompt.append((f"The image contains obstacles, {bbox_list_str}.\n"))
+        list_prompt.append(f'First, describe the overall photo from near to far.')
+        list_prompt.append(f'Second, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path in 1 line.')
+        list_prompt.append(f'Third, choose GO or STOP with the reason in 1 line.')
+        list_prompt = [' '.join(list_prompt)]
+
+
+    elif trial_num == 20:   # one-turn query without description
+        if sep_system:
+            list_system.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_system.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing. "
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property.\n"
+                                )
+            list_system = [' '.join(list_system)]
+        else:
+            list_prompt.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_prompt.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                                "Consider the starting point as the ground where the user is standing. "
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property.\n"
+                                )
+        if len(bboxes) > 0:
+            list_prompt.append((f"The image contains obstacles, {bbox_list_str}.\n"))
+        list_prompt.append(f'First, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path in 1 line.')
+        list_prompt.append(f'Second, choose GO or STOP with the reason in 1 line.')
+        list_prompt = [' '.join(list_prompt)]
+
+    elif trial_num == 500:
+        # reordering questions
+        list_prompt.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+        list_prompt.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                            "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
+                            "Consider the starting point as the ground where the user is standing.\n"
+                            )
+        if len(bboxes) > 0:
+            list_prompt.append((f"The image contains obstacles, {bbox_list_str}.\n"))
+        list_prompt.append(f'After describing the overall photo from near to far, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path.')
+        list_prompt.append("Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
+        list_prompt = [' '.join(list_prompt)]
+
+        # Summarize prompt
+        list_prompt.append('Summarize the path to the destination using direction and distance in 1 line. ')
+        list_prompt.append('Select GO or STOP based on common sense. Tell in 1 line about thought process leading up to the decision. ')
+        list_prompt.append('If select GO, then enumerate the only obstacles on the path with its relative position to the bottom-center point of the image. If select STOP, describe the object that caused it to stop.')
+        
     else:
         raise AssertionError(f'{trial_num} is not supported')
 
-    return list_prompt
+    return list_prompt, list_system

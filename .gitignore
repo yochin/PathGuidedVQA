@@ -29,4 +29,9 @@ llava/model/multimodal_encoder/__pycache__/builder.cpython-310.pyc
 llava/model/multimodal_encoder/__pycache__/clip_encoder.cpython-310.pyc
 llava/model/multimodal_projector/__pycache__/builder.cpython-310.pyc
 __pycache__/setGP.cpython-310.pyc
+__pycache__/prompt_library.cpython-310.pyc
+llava/model/language_model/__pycache__/llava_mistral.cpython-310.pyc
+llava/serve/__pycache__/__init__.cpython-310.pyc
+llava/serve/__pycache__/cli.cpython-310.pyc
+run_yochin_multiple.sh
 run_yochin.sh

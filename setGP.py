@@ -156,10 +156,10 @@ def read_anno(path_to_xml, rescaling=False, filtering_score=-1.0):
 
     for obj in root.iter('object'):
         bbox = obj.find('bndbox')
-        x_min = int(bbox.find('xmin').text)
-        y_min = int(bbox.find('ymin').text)
-        x_max = int(bbox.find('xmax').text)
-        y_max = int(bbox.find('ymax').text)
+        x_min = float(bbox.find('xmin').text)
+        y_min = float(bbox.find('ymin').text)
+        x_max = float(bbox.find('xmax').text)
+        y_max = float(bbox.find('ymax').text)
 
         if rescaling:
             x_min = clamp((float(x_min) / w_org), 0, 1)

@@ -2,6 +2,8 @@ import openai
 import base64
 # from llava15.eval.run_llava import init_llava15_model, run_llava15_model
 from llava.eval.run_llava import init_llava16_model, run_llava16_model
+from llava.serve.cli import run_llava16_model_cli
+from llava.conversation import conv_templates
 from transformers import set_seed
 from prompt_library import get_prompt
 import pdb
@@ -14,7 +16,7 @@ def encode_image_to_base64(image_path):
 
 class LargeMultimodalModels():
     def __init__(self, model_name=None, llava_model_base_path=None, llava_model_path=None, ferret_model_path=None):
-        self.possible_models = ['dummy', 'llava', 'chatgpt', 'ferret', 'llava16']
+        self.possible_models = ['dummy', 'llava', 'chatgpt', 'ferret', 'llava16', 'llava16_cli']
 
         self.model_name = model_name
 
@@ -24,15 +26,20 @@ class LargeMultimodalModels():
         if self.model_name == 'chatgpt':
             self.OPENAI_API_KEY = "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"
         # for llava
-        elif self.model_name in ['llava', 'llava16']:
+        elif self.model_name in ['llava', 'llava16', 'llava16_cli']:
             self.llava_model_path = llava_model_path
             self.llava_model_base_path = llava_model_base_path
 
             if self.model_name == 'llava16':
                 self.llava_tokenizer, self.llava_model, self.llava_image_processor, \
-                self.llava_context_len, self.llava_model_name = init_llava16_model(model_path=self.llava_model_path,
+                self.llava_context_len, self.llava_model_name, self.input_conv_mode = init_llava16_model(model_path=self.llava_model_path,
                                                                                 model_base=self.llava_model_base_path,
                                                                                 )
+            elif self.model_name == 'llava16_cli':
+                self.llava_tokenizer, self.llava_model, self.llava_image_processor, \
+                self.llava_context_len, self.llava_model_name, self.llava_input_conv_mode = init_llava16_model(model_path=self.llava_model_path, model_base=self.llava_model_base_path, 
+                                                    input_conv_mode=None)
+                print('@LargeMultimodalModels - init_llava16_model: ', self.llava_model_name)
             else:
                 self.llava_tokenizer, self.llava_model, self.llava_image_processor, \
                 self.llava_context_len, self.llava_model_name = init_llava15_model(model_path=self.llava_model_path,
@@ -42,18 +49,22 @@ class LargeMultimodalModels():
             self.ferret_model_path = ferret_model_path
         
 
-    def describe_whole_images_with_boxes(self, image_path, bboxes, goal_label_cxcy, step_by_step=False):
-        print('\nimage_path:', image_path)
-        print('bboxes:', bboxes)
-        print('goal_label_cxcy:', goal_label_cxcy)
+    def describe_whole_images_with_boxes(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, list_example_prompt=[]):
+        print('\n')
+        print('@describe_whole_images_with_boxes - image_path:', image_path)
+        print('@describe_whole_images_with_boxes - bboxes:', bboxes)
+        print('@describe_whole_images_with_boxes - goal_label_cxcy:', goal_label_cxcy)
+
+        if len(list_example_prompt) > 0:
+            assert self.model_name == 'llava16_cli'
 
         res_answer = ''
         res_query = ''
 
         if self.model_name == 'dummy':
             res_answer = self.describe_all_bboxes_with_dummy()
-        elif self.model_name in ['llava', 'ferret', 'llava16']:
-            res_query, res_answer = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, step_by_step, self.model_name)
+        elif self.model_name in ['llava', 'ferret', 'llava16', 'llava16_cli']:
+            res_query, res_answer = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, step_by_step, self.model_name, list_example_prompt)
         elif self.model_name == 'chatgpt':
             res_answer = self.describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy)
         else:
@@ -116,35 +127,68 @@ class LargeMultimodalModels():
         return answer
 
     
-    def describe_all_bboxes_with_llava(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, model_name=None):
+    def describe_all_bboxes_with_llava(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, model_name=None, list_example_prompt=[]):
         set_seed(42)
         input_temperature = 0.6
         input_top_p = 0.9
 
         if step_by_step:
-            list_prompt = get_prompt(goal_label_cxcy, bboxes, trial_num=18)
+            list_prompt, list_system = get_prompt(goal_label_cxcy, bboxes, trial_num=19, sep_system=True)
 
-            list_answer = []
-            for i_prompt, prompt in enumerate(list_prompt):
-                if i_prompt == 0:
-                    in_prompt = prompt
-                else:
-                    in_prompt = ' '.join([list_prompt[i_prompt-1], '\n',
-                                          'ASSISTANT: ', list_answer[i_prompt-1], '\n', 
-                                          'USER:', prompt])
+            if model_name == 'llava16_cli':
+                list_answer = run_llava16_model_cli(self.llava_tokenizer, self.llava_model, self.llava_image_processor, self.llava_context_len, self.llava_model_name, 
+                                                    image_files=image_path, list_queries=list_prompt, input_conv_mode=self.llava_input_conv_mode,
+                                                    input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1,
+                                                    input_max_new_tokens=512, input_debug=True, list_ex_prompt=list_example_prompt, list_system=list_system,
+                                                    use_ex_image=False)
+            
+            elif model_name == 'gpt4v':
+                # 이미지를 base64로 인코딩
+                encoded_image = encode_image_to_base64(image_path)
+                # OpenAI API 키 설정 (환경 변수에서 가져옴)
+                openai.api_key = self.OPENAI_API_KEY
+                completion = openai.chat.completions.create(
+                #model = "gpt-4",
+                #messages=[
+                #    {
+                #        "role": "user",
+                #        "content": prompt,
+                #    },
+                model="gpt-4-1106-preview",
+                messages=[
+                    {"role": "system", "content": "This is an image-based task."},
+                    {"role": "user", "content": encoded_image}, #, "mimetype": "image/jpeg"
+                    {"role": "user", "content": prompt},
+                ],
+                #max_tokens=1000,
+                )
+                answer = completion.choices[0].message.content
+                list_answer = [answer]
+                        
+            else:
+                list_answer = []
+                for i_prompt, prompt in enumerate(list_prompt):
+                    if i_prompt == 0:
+                        in_prompt = prompt
+                    else:
+                        conv = conv_templates[self.input_conv_mode].copy()       # reset the conversation by copying from templates
 
-                if model_name == 'llava':
-                    answer = run_llava15_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
-                                            input_query=in_prompt, image_files=image_path, input_conv_mode=None, input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1, 
-                                            input_max_new_tokens=512, model_name=self.llava_model_name)
-                elif model_name == 'llava16':
-                    answer = run_llava16_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
-                                            input_query=in_prompt, image_files=image_path, input_conv_mode=None, input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1, 
-                                            input_max_new_tokens=512, model_name=self.llava_model_name)
-                elif model_name == 'ferret':
-                    pdb.set_trace()
+                        in_prompt = ' '.join([conv.roles[0], '\n', list_prompt[i_prompt-1], '\n',
+                                            conv.roles[1], '\n', list_answer[i_prompt-1], '\n', 
+                                            conv.roles[0], '\n', prompt])
 
-                list_answer.append(answer)
+                    if model_name == 'llava':
+                        answer = run_llava15_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
+                                                input_query=in_prompt, image_files=image_path, input_conv_mode=None, input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1, 
+                                                input_max_new_tokens=512, model_name=self.llava_model_name)
+                    elif model_name == 'llava16':
+                        answer = run_llava16_model(tokenizer=self.llava_tokenizer, model=self.llava_model, image_processor=self.llava_image_processor, context_len=self.llava_context_len, 
+                                                input_query=in_prompt, image_files=image_path, input_conv_mode=self.input_conv_mode, input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1, 
+                                                input_max_new_tokens=512, model_name=self.llava_model_name)
+                    elif model_name == 'ferret':
+                        pdb.set_trace()
+
+                    list_answer.append(answer)
 
             res_answer = '[!@#$NEXT!@#$]'.join(list_answer)
             res_prompt = '[!@#$NEXT!@#$]'.join(list_prompt)
