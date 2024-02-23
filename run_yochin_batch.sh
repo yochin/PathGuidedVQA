@@ -1,0 +1,4 @@
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 python generate_data_by_yochin.py --llava-model-dir ../llm_models/llava/llava-v1.6-34b --model-name llava16_cli --db-dir ../val100_yochin --prompt-id 119 --output ../output_t1 | tee ../log_t1.txt
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 python generate_data_by_yochin.py --llava-model-dir ../llm_models/llava/llava-v1.6-34b --model-name llava16_cli --db-dir ../val100_yochin --prompt-id 118 --output ../output_t2 | tee ../log_t2.txt
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 python generate_data_by_yochin.py --llava-model-dir ../llm_models/llava/llava-v1.6-34b --model-name llava16_cli --db-dir ../val100_yochin --ex-dir ../examples --prompt-id 120 --output ../output_t3 | tee ../log_t3.txt
+CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 python generate_data_by_yochin.py --llava-model-dir ../llm_models/llava/llava-v1.6-34b --model-name llava16_cli --db-dir ../val100_yochin --ex-dir ../examples --prompt-id 130 --output ../output_t4 | tee ../log_t4.txt

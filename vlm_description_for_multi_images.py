@@ -14,10 +14,12 @@ def encode_image_to_base64(image_path):
     
 
 class LargeMultimodalModels():
-    def __init__(self, model_name=None, llava_model_base_path=None, llava_model_path=None, ferret_model_path=None):
+    def __init__(self, model_name=None, llava_model_base_path=None, llava_model_path=None, ferret_model_path=None, prompt_id=18):
         self.possible_models = ['dummy', 'llava', 'chatgpt', 'ferret', 'llava16', 'llava16_cli']
 
         self.model_name = model_name
+        self.prompt_id = prompt_id
+        print('@LargeMultimodalModels - prompt_id: ', prompt_id)
 
         assert self.model_name in self.possible_models
 
@@ -131,7 +133,7 @@ class LargeMultimodalModels():
         input_top_p = 0.9
 
         if step_by_step:
-            list_prompt, list_system = get_prompt(goal_label_cxcy, bboxes, trial_num=19, sep_system=True)
+            list_prompt, list_system = get_prompt(goal_label_cxcy, bboxes, trial_num=self.prompt_id, sep_system=True)
 
             if model_name == 'llava16_cli':
                 list_answer = run_llava16_model_cli(self.llava_tokenizer, self.llava_model, self.llava_image_processor, self.llava_context_len, self.llava_model_name, 

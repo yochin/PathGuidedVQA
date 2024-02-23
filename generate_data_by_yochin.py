@@ -39,6 +39,9 @@ def parse_args():
      parser.add_argument(
          '--ex-dir', metavar='DIRECTORY', default=None,
          help='directory which contains examples')
+     
+     parser.add_argument(
+         '--prompt-id', default=18, type=int)
 
      return parser.parse_args()
 
@@ -163,7 +166,8 @@ def main():
         list_ex_images = [] 
         list_ex_prompt = []
 
-    lvm = LargeMultimodalModels(args.model_name, llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path)
+    print('@main - prompt_id: ', args.prompt_id)
+    lvm = LargeMultimodalModels(args.model_name, llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path, prompt_id=args.prompt_id)
 
     choose_one_random_gp = True     # select one random gp when many gps are detected
 
