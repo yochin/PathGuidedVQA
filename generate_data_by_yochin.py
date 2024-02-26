@@ -187,7 +187,7 @@ def main():
     files = os.listdir(image_path)
 
     # 이미지 파일들만 필터링
-    image_files = [f for f in files if f.endswith(('.png', '.jpg', '.jpeg'))]
+    image_files = [f for f in files if f.endswith(('.png', '.jpg', '.jpeg', '.JPG'))]
     image_files.sort()  # return itself
 
     # 0. Definition    

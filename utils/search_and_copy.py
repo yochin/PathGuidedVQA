@@ -28,15 +28,16 @@ def copy_file(source_folder, destination_folder, file_name, do_copy=True):
 
 
 if __name__ == '__main__':   
-    source_image_folder = '../val100_yochin/images'    
+    # source_image_folder = '../val100_yochin/images'    
+    source_image_folder = '../val100_hbo/images'
 
     # source_anno_folder = '/home/yochin/Desktop/GLIP/OUTPUT_gd/aihub_pwalkDB_with_gd_labels_using_yolo_detector_train852/pred_pascal'
     # source_anno_folder = '/home/yochin/Desktop/GLIP/OUTPUT_gd/gdDB_with_aihub_labels_using_yolo_detector_train958/pred_pascal'
-    # destination_anno_folder = '../val100_yochin/predicted_labels'
+    # destination_anno_folder = '../val100_hbo/det_anno_pred'
 
     # source_anno_folder = '/media/NAS_GDHRI/dbs/aihub_pwalk/organized/Annotations'
     source_anno_folder = '/media/NAS_GDHRI/dbs/naeultech_231109/organized/Annotations'
-    destination_anno_folder = '../val100_yochin/gt_labels'
+    destination_anno_folder = '../val100_hbo/det_anno_gt'
 
     do_copy = True     # if False, just show the copy info.
 

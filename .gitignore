@@ -35,3 +35,5 @@ llava/serve/__pycache__/__init__.cpython-310.pyc
 llava/serve/__pycache__/cli.cpython-310.pyc
 run_yochin_multiple.sh
 run_yochin.sh
+eval/clipscore/__pycache__/generation_eval_utils.cpython-310.pyc
+eval/clipscore/__pycache__/generation_eval_utils.cpython-311.pyc
