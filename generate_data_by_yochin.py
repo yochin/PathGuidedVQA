@@ -207,10 +207,7 @@ def main():
         if anno_path2 is not None:
             xml_path2 = os.path.join(anno_path2, img_file_wo_ext + '.xml')
         xml_path_gt = os.path.join(anno_path_gt, img_file_wo_ext + '.xml')
-
-        
-        
-
+     
         # 이미지를 열고
         img = Image.open(img_path)
         whole_width, whole_height = img.size

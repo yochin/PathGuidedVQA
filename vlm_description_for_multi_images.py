@@ -63,10 +63,8 @@ class LargeMultimodalModels():
 
         if self.model_name == 'dummy':
             res_answer = self.describe_all_bboxes_with_dummy()
-        elif self.model_name in ['llava', 'ferret', 'llava16', 'llava16_cli']:
+        elif self.model_name in ['llava', 'ferret', 'llava16', 'llava16_cli', 'chatgpt']:
             res_query, res_answer = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, step_by_step, self.model_name, list_example_prompt)
-        elif self.model_name == 'chatgpt':
-            res_answer = self.describe_all_bboxes_with_chatgpt(image_path, bboxes, goal_label_cxcy)
         else:
             raise AssertionError(f'{self.model_name} is not supported!')
         
@@ -79,52 +77,52 @@ class LargeMultimodalModels():
         return answer
     
 
-    def describe_all_bboxes_with_chatgpt(self, image_path, bboxes, goal_label_cxcy):
-        # 이미지를 base64로 인코딩
-        encoded_image = encode_image_to_base64(image_path)
+    # def describe_all_bboxes_with_chatgpt(self, image_path, bboxes, goal_label_cxcy):
+    #     # 이미지를 base64로 인코딩
+    #     encoded_image = encode_image_to_base64(image_path)
 
-        # 각 바운딩 박스에 대한 설명 구성
-        bbox_descriptions = [f"{label} at ({x_min}, {y_min}, {x_max}, {y_max})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
-        bbox_list_str = ", ".join(bbox_descriptions)
-        goal_label, goal_cxcy = goal_label_cxcy
-        dest_descriptions = f"{goal_label} at ({goal_cxcy[0]}, {goal_cxcy[1]})"
+    #     # 각 바운딩 박스에 대한 설명 구성
+    #     bbox_descriptions = [f"{label} at ({x_min}, {y_min}, {x_max}, {y_max})" for label, (x_min, y_min, x_max, y_max), _ in bboxes]
+    #     bbox_list_str = ", ".join(bbox_descriptions)
+    #     goal_label, goal_cxcy = goal_label_cxcy
+    #     dest_descriptions = f"{goal_label} at ({goal_cxcy[0]}, {goal_cxcy[1]})"
 
-        # 프롬프트 구성
-        prompt = (  "[Context: The input image depicts the view from a pedestrian's position, " 
-                    "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
-                    "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
-                    "Consider the starting point as the ground where the user is standing.]\n" 
-                    f"[Obstacle Name at (bounding box): [{bbox_list_str}].]\n"
-                    f"[Destination Name at (point): [{dest_descriptions}].]\n"
-                    "Describe the obstacles to the destination in a natural and simple way "
-                    "for a visually impaired person as a navigation assistant in 3 sentences. "
-                    "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
+    #     # 프롬프트 구성
+    #     prompt = (  "[Context: The input image depicts the view from a pedestrian's position, " 
+    #                 "taken at a point 80cm above the ground for pedestrian navigation purposes. " 
+    #                 "In this image, the user's starting point is situated below the center of the image at (0.5, 1.0). "
+    #                 "Consider the starting point as the ground where the user is standing.]\n" 
+    #                 f"[Obstacle Name at (bounding box): [{bbox_list_str}].]\n"
+    #                 f"[Destination Name at (point): [{dest_descriptions}].]\n"
+    #                 "Describe the obstacles to the destination in a natural and simple way "
+    #                 "for a visually impaired person as a navigation assistant in 3 sentences. "
+    #                 "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property. ")
 
     
-        # print("[PROMPT]: ", prompt)
-        # OpenAI API 키 설정 (환경 변수에서 가져옴)
-        openai.api_key = self.OPENAI_API_KEY
-        completion = openai.chat.completions.create(
-            #model = "gpt-4",
-            model="gpt-4-1106-preview",
-            #messages=[
-            #    {
-            #        "role": "user",
-            #        "content": prompt,
-            #    },
-            messages=[
-                {"role": "system", "content": "This is an image-based task."},
-                {"role": "user", "content": encoded_image}, #, "mimetype": "image/jpeg"
-                {"role": "user", "content": prompt},
-            ],
-            #max_tokens=1000,
-        )
+    #     # print("[PROMPT]: ", prompt)
+    #     # OpenAI API 키 설정 (환경 변수에서 가져옴)
+    #     openai.api_key = self.OPENAI_API_KEY
+    #     completion = openai.chat.completions.create(
+    #         #model = "gpt-4",
+    #         model="gpt-4-1106-preview",
+    #         #messages=[
+    #         #    {
+    #         #        "role": "user",
+    #         #        "content": prompt,
+    #         #    },
+    #         messages=[
+    #             {"role": "system", "content": "This is an image-based task."},
+    #             {"role": "user", "content": encoded_image}, #, "mimetype": "image/jpeg"
+    #             {"role": "user", "content": prompt},
+    #         ],
+    #         #max_tokens=1000,
+    #     )
 
-        answer = completion.choices[0].message.content
+    #     answer = completion.choices[0].message.content
 
-        # print("[ANSWER]: ", answer)
+    #     # print("[ANSWER]: ", answer)
 
-        return answer
+    #     return answer
 
     
     def describe_all_bboxes_with_llava(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, model_name=None, list_example_prompt=[]):
@@ -142,25 +140,46 @@ class LargeMultimodalModels():
                                                     input_max_new_tokens=512, input_debug=True, list_ex_prompt=list_example_prompt, list_system=list_system,
                                                     use_ex_image=False)
             
-            elif model_name == 'gpt4v':
+            elif model_name == 'chatgpt':
                 # 이미지를 base64로 인코딩
-                encoded_image = encode_image_to_base64(image_path)
+                encoded_image = encode_image_to_base64(image_path[0])
                 # OpenAI API 키 설정 (환경 변수에서 가져옴)
                 openai.api_key = self.OPENAI_API_KEY
+
+                
                 completion = openai.chat.completions.create(
-                #model = "gpt-4",
-                #messages=[
-                #    {
-                #        "role": "user",
-                #        "content": prompt,
-                #    },
-                model="gpt-4-1106-preview",
-                messages=[
-                    {"role": "system", "content": "This is an image-based task."},
-                    {"role": "user", "content": encoded_image}, #, "mimetype": "image/jpeg"
-                    {"role": "user", "content": prompt},
-                ],
-                #max_tokens=1000,
+                    #model = "gpt-4",
+                    #messages=[
+                    #    {
+                    #        "role": "user",
+                    #        "content": prompt,
+                    #    },
+                    # model="gpt-4-1106-preview",
+                    # messages=[
+                    #     {"role": "system", "content": list_system[0]},
+                    #     {"role": "user", "content": encoded_image}, #, "mimetype": "image/jpeg"
+                    #     {"role": "user", "content": list_prompt[0]},
+                    # ],
+                    model="gpt-4-vision-preview",
+                    messages=[
+                        {"role": "system", "content": list_system[0]},
+                        {"role": "user", 
+                         "content": [
+                             {
+                                "type": "text", 
+                                "text": list_prompt[0]
+                             },
+                             {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{encoded_image}",
+                                    "detail": "high"    # "low", "high", "auto"
+                                }
+                             } #, "mimetype": "image/jpeg"
+                         ]
+                        }
+                    ],
+                    max_tokens=1024,
                 )
                 answer = completion.choices[0].message.content
                 list_answer = [answer]
