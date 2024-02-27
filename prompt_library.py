@@ -136,6 +136,28 @@ def get_prompt(goal_label_cxcy, bboxes, trial_num, sep_system=False):
         list_prompt.append('Enumerate the obstacles only on the path with its relative position to the bottom-center point of the image. ')
         list_prompt.append('Choose: go left 45 degree, go straight, go right 45 degree, or stop. Then explain the reason in 1 line. ')
     
+    elif trial_num == 1118:
+        if sep_system:
+            list_system.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_system.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image."
+                                "Consider the starting point as the ground where the user is standing."
+                                "Explain as if you were a navigation assistant explaining to a visually impaired person."
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property.\n"
+                                )
+            list_system = [' '.join(list_system)]
+        else:
+            raise AssertionError('Unsupported')
+        if len(bboxes) > 0:
+            list_prompt.append((f"The image contains obstacles, {bbox_list_str}.\n"))
+        list_prompt.append(f'Describe the overall photo from near to far.')
+        list_prompt = [' '.join(list_prompt)]
+
+        # Summarize prompt
+        list_prompt.append(f'Explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path in 1 line. ')
+        list_prompt.append('What obstacles are on the path described? Enumerate one by one. ')
+        list_prompt.append('What action do you recommend? Please choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Then, explain the reason in 1 line. ')
+    
     elif trial_num == 21:
         if sep_system:
             list_system.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
@@ -285,6 +307,27 @@ def get_prompt(goal_label_cxcy, bboxes, trial_num, sep_system=False):
         list_prompt.append(f'First, describe the overall photo from near to far.')
         list_prompt.append(f'Second, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path in 1 line.')
         list_prompt.append(f'Third, choose: go left 45 degree, go straight, go right 45 degree, or stop, with the reason in 1 line.')
+        list_prompt = [' '.join(list_prompt)]
+
+    elif trial_num == 1119:   # one-turn query
+        if sep_system:
+            list_system.append('A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+            list_system.append("The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
+                                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image."
+                                "Consider the starting point as the ground where the user is standing."
+                                "Explain as if you were a navigation assistant explaining to a visually impaired person."
+                                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property.\n"
+                                )
+            list_system = [' '.join(list_system)]
+        else:
+            raise AssertionError('Unsupported')
+        
+        if len(bboxes) > 0:
+            list_prompt.append((f"The image contains obstacles, {bbox_list_str}.\n"))
+        list_prompt.append(f'First, describe the overall photo from near to far.')
+        list_prompt.append(f'Second, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path in 1 line.')
+        list_prompt.append(f'Third, what obstacles are on the path described? Enumerate one by one.')
+        list_prompt.append(f'Fourth, what action do you recommend? Please choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Then, explain the reason in 1 line.')
         list_prompt = [' '.join(list_prompt)]
 
     elif trial_num == 20:   # one-turn query without description
