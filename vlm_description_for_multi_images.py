@@ -1,7 +1,7 @@
 import openai
 import base64
 from llava.eval.run_llava import init_llava16_model, run_llava16_model
-from llava.serve.cli import run_llava16_model_cli
+from llava.serve.cli import init_llava16_model_cli, run_llava16_model_cli
 from llava.conversation import conv_templates
 from transformers import set_seed
 from prompt_library import get_prompt
@@ -38,7 +38,7 @@ class LargeMultimodalModels():
                                                                                 )
             elif self.model_name == 'llava16_cli':
                 self.llava_tokenizer, self.llava_model, self.llava_image_processor, \
-                self.llava_context_len, self.llava_model_name, self.llava_input_conv_mode = init_llava16_model(model_path=self.llava_model_path, model_base=self.llava_model_base_path, 
+                self.llava_context_len, self.llava_model_name, self.llava_input_conv_mode = init_llava16_model_cli(model_path=self.llava_model_path, model_base=self.llava_model_base_path, 
                                                     input_conv_mode=None)
                 print('@LargeMultimodalModels - init_llava16_model: ', self.llava_model_name)
             else:

@@ -34,7 +34,7 @@ def load_images(image_files):
 
 
 
-def init_llava16_model(model_path, model_base, input_conv_mode=None):
+def init_llava16_model_cli(model_path, model_base, input_conv_mode=None):
     # Model
     disable_torch_init()
 
@@ -107,19 +107,25 @@ def run_llava16_model_cli(tokenizer, model, image_processor, context_len, model_
         print('@run_llava16_model_cli - add example message: ', conv.messages)
         # print('@run_llava16_model_cli - add example message ')
 
-    if use_ex_image:
-        images = load_images(image_files)
-    else:
-        images = load_images([image_files[-1]])
-    image_sizes = [x.size for x in images]
-    image_tensor = process_images(images, image_processor, model.config)
+    if len(image_files) > 0:
+        if use_ex_image:
+            images = load_images(image_files)
+        else:
+            images = load_images([image_files[-1]])
+        image_sizes = [x.size for x in images]
+        image_tensor = process_images(images, image_processor, model.config)
 
-    if type(image_tensor) is list:
-        image_tensor = [image.to(model.device, dtype=torch.float16) for image in image_tensor]
-    else:
-        image_tensor = image_tensor.to(model.device, dtype=torch.float16)
+        if type(image_tensor) is list:
+            image_tensor = [image.to(model.device, dtype=torch.float16) for image in image_tensor]
+        else:
+            image_tensor = image_tensor.to(model.device, dtype=torch.float16)
 
-    image = images[-1]
+        image = images[-1]
+    else:
+        image = None
+        image_tensor = None
+        image_sizes = []
+
     list_outputs = []
     for query in list_queries:
         inp = query

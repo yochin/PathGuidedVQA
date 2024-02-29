@@ -1,10 +1,18 @@
 import os
 import json
 import argparse
+import openai
+from llava.serve.cli import init_llava16_model_cli, run_llava16_model_cli
+from transformers import set_seed
 
 from tools import read_gt_pair_from_xml
 import pdb
 
+# from predicted result xml files,
+# extract 3 answers 
+# 1. long sentence for clipscore
+# 2. 4 decisions
+# 3. obstacles
 
 def parse_args():
      parser = argparse.ArgumentParser(
@@ -15,43 +23,123 @@ def parse_args():
          help='directory which contains images and object properties')
      
      parser.add_argument(
-         '--output', metavar='FILEPATH', 
-         help='path for an output json file')
+         '--output-dir', metavar='DERECTORY for several answer files', 
+         help='derectory for several output files')
 
      return parser.parse_args()
      
 
 def main():
     args = parse_args()
-    args.gt_dir = '../output_t4/qa'
-    args.output = '../eval_clipscore/t4.json'
+    args.gt_dir = '../output_t11/qa'
+    args.output_dir = '../eval_outputs'
+
+    use_llava = True
+    use_gpt = False
+
+    if use_llava:
+        llava_model_path = '../llm_models/llava/llava-v1.6-34b'
+        llava_model_base_path = None
+        llava_tokenizer, llava_model, llava_image_processor, llava_context_len, llava_model_name, llava_input_conv_mode = init_llava16_model_cli(model_path=llava_model_path, model_base=llava_model_base_path, input_conv_mode=None)
+    if use_gpt:
+        openai.api_key = "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"
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+
+    path_output_clipscore = os.path.join(args.output_dir, 'pred_one_sentence.json')
+    path_output_action_wm = os.path.join(args.output_dir, 'pred_action_wm.json')
+    path_output_action_llava = os.path.join(args.output_dir, 'pred_action_llava.json')
+    path_output_obs = os.path.join(args.output_dir, 'pred_obs.json')
 
     files = os.listdir(args.gt_dir)
     xml_files = [f for f in files if f.endswith(('.xml'))]
+    xml_files = sorted(xml_files)
 
-    list_removal = ['<|startoftext|>', '<|im_end|>', '[!@#$NEXT!@#$]']
-    # list_actions = ['go left 45 degree', 'go straight', 'go right 45 degree', 'stop']
+    list_removal_tokens = ['<|startoftext|>', '<|im_end|>', '[!@#$NEXT!@#$]']
+    list_actions = ['go left 45 degree', 'go straight', 'go right 45 degree', 'stop']
 
-
-    # first parsing, then print
-    # go 0: we suggest the user go forward because ...
-    # 
-
-    res = {}
+    res_clipscore = {}
+    res_action_wordmatching = {}
+    res_action_llava = {}
+    res_obs = {}
     for xml_file in xml_files:
         xml_path = os.path.join(args.gt_dir, xml_file)
         img_filename, answer = read_gt_pair_from_xml(xml_path)
 
         img_filename_only = os.path.splitext(img_filename)[0]
 
-        # parsing
-        for rem in list_removal:
+        # clipscore
+        for rem in list_removal_tokens:
             answer = answer.replace(rem, '')
 
-        res[img_filename_only] = answer
+        res_clipscore[img_filename_only] = answer
 
-    with open(args.output, 'w', encoding='utf-8') as json_file:
-        json.dump(res, json_file, indent="\t", ensure_ascii=False)
+        # actions - word matching
+        l_answer = answer.lower()
+
+        res_action_wordmatching[img_filename_only] = ''
+        
+        for act in list_actions:
+            if act in l_answer:
+                res_action_wordmatching[img_filename_only] += act
+
+        # using llava
+        list_prompt = [
+            f'{answer}\n What obstacles are on the path described? Enumerate one by one. Then, extract the base sentence.',
+            f'{answer}\n What action is recommended? Please choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Then, extract the base sentence.'
+        ]
+        
+        if use_llava:
+            set_seed(42)
+            input_temperature = 0.6
+            input_top_p = 0.9
+            list_answer = []
+            for prompt in list_prompt:
+                answer = run_llava16_model_cli(llava_tokenizer, llava_model, llava_image_processor, llava_context_len, llava_model_name, 
+                                                image_files=[], list_queries=[prompt], input_conv_mode=llava_input_conv_mode,
+                                                input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1,
+                                                input_max_new_tokens=512, input_debug=True, use_ex_image=False)
+                list_answer.append(answer)
+
+        if use_gpt:
+            list_answer = []
+            for prompt in list_prompt:
+                response = openai.chat.completions.create(
+                    # model="gpt-4",
+                    model='gpt-3.5-turbo',
+                    messages=[
+                        {
+                            "role": "user", 
+                            "content": prompt,
+                        }
+                    ],
+                    max_tokens=1024,
+                )
+                answer = response.choices[0].message.content
+                list_answer.append(answer)
+
+        print(list_answer)
+        
+        # actions - llava
+        res_action_llava[img_filename_only] = list_answer[0]
+
+        # obstacles
+        res_action_llava[img_filename_only] = list_answer[1]
+
+
+    with open(path_output_clipscore, 'w', encoding='utf-8') as json_file:
+        json.dump(res_clipscore, json_file, indent="\t", ensure_ascii=False)
+
+    with open(path_output_action_wm, 'w', encoding='utf-8') as json_file:
+        json.dump(res_action_wordmatching, json_file, indent="\t", ensure_ascii=False)
+
+    with open(path_output_action_llava, 'w', encoding='utf-8') as json_file:
+        json.dump(res_action_llava, json_file, indent="\t", ensure_ascii=False)
+
+    with open(path_output_obs, 'w', encoding='utf-8') as json_file:
+        json.dump(res_obs, json_file, indent="\t", ensure_ascii=False)
+
 
     return
    
