@@ -168,7 +168,8 @@ def run_llava16_model_cli(tokenizer, model, image_processor, context_len, model_
                 num_beams=input_num_beams,
                 streamer=streamer,
                 use_cache=True,
-                max_new_tokens=input_max_new_tokens*4
+                max_new_tokens=input_max_new_tokens*4,
+                repetition_penalty=1.3
                 )
                 # max_new_tokens=input_max_new_tokens
                 # max_length=input_max_new_tokens*10

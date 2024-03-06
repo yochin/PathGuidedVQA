@@ -1,4 +1,4 @@
-python ./clipscore/clipscore.py ../../clipscore/t1.json ../../val100/images/ --save_per_instance ../../clipscore/t1_inst.json | tee ../../clipscore/clipscore_result_t1.txt
-python ./clipscore/clipscore.py ../../clipscore/t2.json ../../val100/images/ --save_per_instance ../../clipscore/t2_inst.json | tee ../../clipscore/clipscore_result_t2.txt
-python ./clipscore/clipscore.py ../../clipscore/t3.json ../../val100/images/ --save_per_instance ../../clipscore/t3_inst.json | tee ../../clipscore/clipscore_result_t3.txt
-python ./clipscore/clipscore.py ../../clipscore/t4.json ../../val100/images/ --save_per_instance ../../clipscore/t4_inst.json | tee ../../clipscore/clipscore_result_t4.txt
+for tt in 11 12 13 14 15
+do
+    python ./clipscore/clipscore.py ../../output_t"$tt"/eval/pred_one_sentence.json ../../val100/images/ --save_per_instance ../../output_t"$tt"/eval/clipscore_per_inst.json | tee ../../output_t"$tt"/eval/clipscore_result.txt
+done

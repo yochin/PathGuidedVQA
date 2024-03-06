@@ -31,11 +31,9 @@ def parse_args():
 
 def main():
     args = parse_args()
-    args.gt_dir = '../output_t11/qa'
-    args.output_dir = '../eval_outputs'
 
-    use_llava = True
-    use_gpt = False
+    use_llava = False    # generate json
+    use_gpt = True     # generate folder and txt file, sometimes lost the connection
 
     if use_llava:
         llava_model_path = '../llm_models/llava/llava-v1.6-34b'
@@ -44,50 +42,56 @@ def main():
     if use_gpt:
         openai.api_key = "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"
 
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
+    # set the output directory
+    path_output_action_wm = os.path.join(args.output_dir, 'pred_action_wm')
+    path_output_action_llava = os.path.join(args.output_dir, 'pred_action_llava')
+    path_output_obs = os.path.join(args.output_dir, 'pred_obs')
 
-    path_output_clipscore = os.path.join(args.output_dir, 'pred_one_sentence.json')
-    path_output_action_wm = os.path.join(args.output_dir, 'pred_action_wm.json')
-    path_output_action_llava = os.path.join(args.output_dir, 'pred_action_llava.json')
-    path_output_obs = os.path.join(args.output_dir, 'pred_obs.json')
+    if not os.path.exists(path_output_action_wm):
+        os.makedirs(path_output_action_wm)
+    
+    if not os.path.exists(path_output_action_llava):
+        os.makedirs(path_output_action_llava)
+    
+    if not os.path.exists(path_output_obs):
+        os.makedirs(path_output_obs)
+    
 
+    # read the list of answer files
     files = os.listdir(args.gt_dir)
     xml_files = [f for f in files if f.endswith(('.xml'))]
     xml_files = sorted(xml_files)
 
     list_removal_tokens = ['<|startoftext|>', '<|im_end|>', '[!@#$NEXT!@#$]']
-    list_actions = ['go left 45 degree', 'go straight', 'go right 45 degree', 'stop']
+    list_actions = ['left 45', 'straight', 'right 45', 'stop']
 
-    res_clipscore = {}
-    res_action_wordmatching = {}
-    res_action_llava = {}
-    res_obs = {}
     for xml_file in xml_files:
         xml_path = os.path.join(args.gt_dir, xml_file)
         img_filename, answer = read_gt_pair_from_xml(xml_path)
 
         img_filename_only = os.path.splitext(img_filename)[0]
 
-        # clipscore
+        # remove special tokens
         for rem in list_removal_tokens:
             answer = answer.replace(rem, '')
-
-        res_clipscore[img_filename_only] = answer
 
         # actions - word matching
         l_answer = answer.lower()
 
-        res_action_wordmatching[img_filename_only] = ''
+        res_action_wordmatching = ''
         
         for act in list_actions:
             if act in l_answer:
-                res_action_wordmatching[img_filename_only] += act
+                res_action_wordmatching += act
 
-        # using llava
+        with open(os.path.join(path_output_action_wm, img_filename_only + '.txt'), 'w') as fid:
+            fid.write(res_action_wordmatching)
+
+
+        # actions, obstacles - using llm
         list_prompt = [
-            f'{answer}\n What obstacles are on the path described? Enumerate one by one. Then, extract the base sentence.',
-            f'{answer}\n What action is recommended? Please choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Then, extract the base sentence.'
+            f'{answer}\n Based on the description, what obstacles are on the path? List one by one. Say only the answer. Use a comma as a separator. If there is no obstacles, say "no obstacles".',  # Then, extract the base sentence.
+            f'{answer}\n Based on the description, what action is recommended? Choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Say only the answer.' # Then, extract the base sentence.
         ]
         
         if use_llava:
@@ -120,26 +124,14 @@ def main():
                 list_answer.append(answer)
 
         print(list_answer)
-        
-        # actions - llava
-        res_action_llava[img_filename_only] = list_answer[0]
 
         # obstacles
-        res_action_llava[img_filename_only] = list_answer[1]
+        with open(os.path.join(path_output_obs, img_filename_only + '.txt'), 'w') as fid:
+            fid.write(list_answer[0])
 
-
-    with open(path_output_clipscore, 'w', encoding='utf-8') as json_file:
-        json.dump(res_clipscore, json_file, indent="\t", ensure_ascii=False)
-
-    with open(path_output_action_wm, 'w', encoding='utf-8') as json_file:
-        json.dump(res_action_wordmatching, json_file, indent="\t", ensure_ascii=False)
-
-    with open(path_output_action_llava, 'w', encoding='utf-8') as json_file:
-        json.dump(res_action_llava, json_file, indent="\t", ensure_ascii=False)
-
-    with open(path_output_obs, 'w', encoding='utf-8') as json_file:
-        json.dump(res_obs, json_file, indent="\t", ensure_ascii=False)
-
+        # actions - llava
+        with open(os.path.join(path_output_action_llava, img_filename_only + '.txt'), 'w') as fid:
+            fid.write(list_answer[1])
 
     return
    
