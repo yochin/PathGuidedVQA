@@ -15,7 +15,22 @@ from nltk import pos_tag
 from gensim.models import KeyedVectors
 from scipy import spatial
 import numpy as np
+import argparse
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()   
+
+    parser.add_argument(
+         '--pred-dir', metavar='DIRECTORY', required=True,
+         help='directory which contains predicted results')
+     
+    parser.add_argument(
+         '--gt-dir', metavar='DIRECTORY', required=True,
+         help='directory which contains ground-truth')
+     
+    return parser.parse_args()
+     
 
 # 유사도 계산 함수 정의
 def get_word_vector(word, model):
@@ -178,13 +193,19 @@ def read_gt(path_gt_file):
     }
 
     return res
+     
 
+def main():
+    args = parse_args()
 
-if __name__ == '__main__':
-    path_to_pred_action = '../output_t11/eval/pred_action_llava'
-    path_to_pred_obs = '../output_t11/eval/pred_obs'
+    path_to_pred_base = args.pred_dir
+    path_to_gt = args.gt_dir
 
-    path_to_gt = '../val100/anno'
+    path_to_pred_action = os.path.join(path_to_pred_base, 'eval/pred_action_llava')
+    path_to_pred_obs = os.path.join(path_to_pred_base, 'eval/pred_obs')
+
+    use_w2v = True
+    remove_dup_obstacle = True
 
     list_action_gt = []
     list_action_pred = []
@@ -196,8 +217,9 @@ if __name__ == '__main__':
 
     list_filename = []
 
-    # 모델 로딩 예시 (실제 경로를 지정해야 함)
-    w2v_model = KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True)
+    if use_w2v:
+        # 모델 로딩 예시 (실제 경로를 지정해야 함)
+        w2v_model = KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True)
 
     # read the list of answer files
     files = os.listdir(path_to_gt)
@@ -250,14 +272,14 @@ if __name__ == '__main__':
         list_obs_pred = [item.replace("no obstacles", "") for item in list_obs_pred]
 
         # remove "" items
-        while '' in list_obs_pred:  
-            list_obs_pred.remove('')
+        list_removal_word = ['']
+        for rm_word in list_removal_word:
+            while rm_word in list_obs_pred:  
+                list_obs_pred.remove(rm_word)
 
-        while '' in gt_total_obs:  
-            gt_total_obs.remove('')
+            while rm_word in gt_total_obs:  
+                gt_total_obs.remove(rm_word)
 
-
-        
         # extract nouns
         list_obs_nouns_gt = []
         for item in gt_total_obs:
@@ -273,13 +295,28 @@ if __name__ == '__main__':
             if len(extracted_noun) > 0:
                 list_obs_nouns_pred.append(extracted_noun[-1])
 
+        list_removal_word = ['[', ']']
+        for rm_word in list_removal_word:
+            while rm_word in list_obs_nouns_pred:  
+                list_obs_nouns_pred.remove(rm_word)
 
-        TP, FP, FN = calculate_confusion_matrix_with_similarity(predicted=list_obs_nouns_pred, ground_truth=list_obs_nouns_gt, model=w2v_model)
-        # TP, FP, FN = calculate_confusion_matrix_with_synonyms(predicted=list_obs_nouns_pred, ground_truth=list_obs_nouns_gt)
+            while rm_word in list_obs_nouns_gt:  
+                list_obs_nouns_gt.remove(rm_word)
+
+        if remove_dup_obstacle:
+            list_obs_nouns_pred = list(set(list_obs_nouns_pred))
+            list_obs_nouns_gt = list(set(list_obs_nouns_gt))
+
+        if use_w2v:
+            TP, FP, FN = calculate_confusion_matrix_with_similarity(predicted=list_obs_nouns_pred, ground_truth=list_obs_nouns_gt, model=w2v_model)
+        else:
+            TP, FP, FN = calculate_confusion_matrix_with_synonyms(predicted=list_obs_nouns_pred, ground_truth=list_obs_nouns_gt)
         list_tp.append(TP)
         list_fp.append(FP)
         list_fn.append(FN)
 
+        print('\n')
+        print(filename)
         print(list_obs_nouns_gt)
         print(list_obs_nouns_pred)
         print(TP, FP, FN)
@@ -295,4 +332,6 @@ if __name__ == '__main__':
     accuracy = correct_predictions / len(list_action_gt)
     print('accuracy: ', accuracy)
 
-    
+
+if __name__ == '__main__':
+    main()
