@@ -70,7 +70,7 @@ def get_prompt_by_hbo(goal_label_cxcy, bboxes, trial_num, sep_system=False):
             list_system.append(
                 "The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes. "
                 "In this image, an user's starting point is situated at the bottom-center point [0.5, 1.0] of the image. "
-                "The user is looking at the [0.5, 0.5] in the image. "
+                "The user is looking at the center [0.5, 0.5] of the image. "
                 "Consider the starting point as the ground where the user is standing. "
                 "Explain as if you were a navigation assistant explaining to a visually impaired person. "
                 "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property.\n"
