@@ -84,7 +84,7 @@ def get_prompt_by_hbo(goal_label_cxcy, bboxes, trial_num, sep_system=False):
             f'Explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path in 1 line. ')
         list_prompt.append('What obstacles are on the path described? Enumerate one by one. ')
         list_prompt.append(
-            'What action do you recommend to a visually impaired person? Please choose from the following four options: \'Go straight\', \'Take a slight left turn and go\', \'Take a slight left turn and go\', and \'Stop\'. Then, explain the reason in 1 line. ')
+            'What action do you recommend to a visually impaired person? Please choose from the following four options: \'Go straight\', \'Take a slight left turn and go\', \'Take a slight right turn and go\', and \'Stop\'. Then, explain the reason in 1 line. ')
 
     else:
         raise AssertionError(f'{trial_num} is not supported')
