@@ -63,10 +63,14 @@ def get_prompt_by_hbo(goal_label_cxcy, bboxes, trial_num, sep_system=False):
     elif trial_num == 91118:
         if sep_system:
             list_system.append(
-                'A chat between a human and an AI that understands visuals. In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. Image size: 1.0x1.0.')
+                'A chat between a human and an AI that understands visuals.'
+                'In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0].'
+                'Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2].'
+                'Image size: 1.0x1.0.')
             list_system.append(
                 "The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes."
-                "In this image, the user's starting point is situated at the bottom-center point [0.5, 1.0] of the image."
+                "In this image, an user's starting point is situated at the bottom-center point [0.5, 1.0] of the image."
+                "If the user "
                 "Consider the starting point as the ground where the user is standing."
                 "Explain as if you were a navigation assistant explaining to a visually impaired person."
                 "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property.\n"
@@ -84,8 +88,9 @@ def get_prompt_by_hbo(goal_label_cxcy, bboxes, trial_num, sep_system=False):
             f'Explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path in 1 line. ')
         list_prompt.append('What obstacles are on the path described? Enumerate one by one. ')
         list_prompt.append(
-            'What action do you recommend to a visually impaired person? Please choose from the following four options: \'Go straight\', \'Take a slight left turn and go\', \'Take a slight right turn and go\', and \'Stop\'. Then, explain the reason in 1 line. ')
-
+            'What action do you recommend to a visually impaired person? Please choose from the following four options: \'Go straight\', \'Turn slightly to the left and go\', \'Turn slightly to the right and go\', and \'Stop\'. Then, explain the reason in 1 line. ')
+        list_prompt.append('For example, if the destination is [0.0, 0.5] and the path is clear, choose \'Turn slightly to the left and go\'')
+        list_prompt.append('If the destination is [1.0, 0.5] and the path is clear, choose \'Turn slightly to the right and go\'')
     else:
         raise AssertionError(f'{trial_num} is not supported')
 
