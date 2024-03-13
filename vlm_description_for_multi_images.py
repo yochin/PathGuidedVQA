@@ -5,6 +5,7 @@ from llava.serve.cli import init_llava16_model_cli, run_llava16_model_cli
 from llava.conversation import conv_templates
 from transformers import set_seed
 from prompt_library import get_prompt
+from prompt_library_by_hbo import get_prompt_by_hbo
 import pdb
 
 
@@ -131,7 +132,8 @@ class LargeMultimodalModels():
         input_top_p = 0.9
 
         if step_by_step:
-            list_prompt, list_system = get_prompt(goal_label_cxcy, bboxes, trial_num=self.prompt_id, sep_system=True)
+#            list_prompt, list_system = get_prompt(goal_label_cxcy, bboxes, trial_num=self.prompt_id, sep_system=True)
+            list_prompt, list_system = get_prompt_by_hbo(goal_label_cxcy, bboxes, trial_num=self.prompt_id, sep_system=True)
 
             if model_name == 'llava16_cli':
                 list_answer = run_llava16_model_cli(self.llava_tokenizer, self.llava_model, self.llava_image_processor, self.llava_context_len, self.llava_model_name, 
