@@ -92,8 +92,8 @@ def get_prompt_by_hbo(goal_label_cxcy, bboxes, trial_num, sep_system=False):
             'Please choose from the following four options: '
             '\'Go straight\', \'Turn slightly to the left and go\', \'Turn slightly to the right and go\', and \'Stop\'. '
             'Then, explain the reason in 1 line. '
-            'For example, if the destination is [0.0, 0.5] and the path is clear, choose \'Turn slightly to the left and go\''
-            'If the destination is [1.0, 0.5] and the path is clear, choose \'Turn slightly to the right and go\''
+            'For example, if the destination is [0.0, 0.5] and the path is clear, choose \'Turn slightly to the left and go\'. '
+            'If the destination is [1.0, 0.5] and the path is clear, choose \'Turn slightly to the right and go\'. '
             )
     else:
         raise AssertionError(f'{trial_num} is not supported')
