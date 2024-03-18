@@ -169,10 +169,10 @@ def run_llava16_model_cli(tokenizer, model, image_processor, context_len, model_
                 streamer=streamer,
                 use_cache=True,
                 max_new_tokens=input_max_new_tokens*4,
-                repetition_penalty=1.3
                 )
                 # max_new_tokens=input_max_new_tokens
                 # max_length=input_max_new_tokens*10
+                # repetition_penalty=1.3 -> generates meaningless words
             
         # outputs = tokenizer.decode(output_ids[0, input_ids.shape[1]:]).strip()   
         outputs = tokenizer.decode(output_ids[0]).strip()  # for LLaVA 1.6

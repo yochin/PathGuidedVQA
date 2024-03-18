@@ -25,6 +25,9 @@ def parse_args():
      parser.add_argument(
          '--output-dir', metavar='DERECTORY for several answer files', 
          help='derectory for several output files')
+     
+     parser.add_argument(
+         '--prompt-id', default=18, type=int)
 
      return parser.parse_args()
      
@@ -43,13 +46,9 @@ def main():
         openai.api_key = "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"
 
     # set the output directory
-    path_output_action_wm = os.path.join(args.output_dir, 'pred_action_wm')
     path_output_action_llava = os.path.join(args.output_dir, 'pred_action_llava')
     path_output_obs = os.path.join(args.output_dir, 'pred_obs')
 
-    if not os.path.exists(path_output_action_wm):
-        os.makedirs(path_output_action_wm)
-    
     if not os.path.exists(path_output_action_llava):
         os.makedirs(path_output_action_llava)
     
@@ -63,13 +62,16 @@ def main():
     xml_files = sorted(xml_files)
 
     list_removal_tokens = ['<|startoftext|>', '<|im_end|>', '[!@#$NEXT!@#$]']
-    list_actions = ['left 45', 'straight', 'right 45', 'stop']
 
     for xml_file in xml_files:
         xml_path = os.path.join(args.gt_dir, xml_file)
         img_filename, answer = read_gt_pair_from_xml(xml_path)
 
         img_filename_only = os.path.splitext(img_filename)[0]
+
+        # # debug, temp
+        # answer = answer.split('[!@#$NEXT!@#$]')[0]
+        # print('split answer and use the first one')
 
         # remove special tokens
         for rem in list_removal_tokens:
@@ -78,21 +80,24 @@ def main():
         # actions - word matching
         l_answer = answer.lower()
 
-        res_action_wordmatching = ''
-        
-        for act in list_actions:
-            if act in l_answer:
-                res_action_wordmatching += act
-
-        with open(os.path.join(path_output_action_wm, img_filename_only + '.txt'), 'w') as fid:
-            fid.write(res_action_wordmatching)
-
-
         # actions, obstacles - using llm
-        list_prompt = [
-            f'{answer}\n Based on the description, what obstacles are on the path? List one by one. Say only the answer. Use a comma as a separator. If there is no obstacles, say "no obstacles".',  # Then, extract the base sentence.
-            f'{answer}\n Based on the description, what action is recommended? Choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Say only the answer.' # Then, extract the base sentence.
-        ]
+        list_prompt = []
+        
+        if args.prompt_id == 1118:
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended? Choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Say only the answer.')
+        elif args.prompt_id == 11118:
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended? Choose from the following options. A) Go right 45, B) Stop, C) Go straight, D) Go left 45. Say only the answer.')
+        elif args.prompt_id == 1158:
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended? Choose from the following options. Go straight, Go left 45, Go right 45, Stop. Say only the answer.')
+        elif args.prompt_id == 11158:
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended? Choose from the following options. Go right 45, Stop, Go straight, Go left 45. Say only the answer.')
+        elif args.prompt_id == 2118:
+            list_prompt.append(f'{answer}\n Based on the description, what action is now recommended to get the destination? Choose from the following options. A) Go straight, B) Move forward slightly to the left, C) Move forward slightly to the right, D) Wait. Say only the answer.')
+        elif args.prompt_id == 2158:
+            list_prompt.append(f'{answer}\n Based on the description, what action is now recommended to get the destination? Choose from the following options. Go straight, Move forward slightly to the left, Move forward slightly to the right, Wait. Say only the answer.')
+
+        list_prompt.append(f'{answer}\n Based on the description, what obstacles are on the path? List one by one. Say only the answer. Use a comma as a separator. If there is no obstacles, say "no obstacles".')
+
         
         if use_llava:
             set_seed(42)
@@ -123,15 +128,17 @@ def main():
                 answer = response.choices[0].message.content
                 list_answer.append(answer)
 
-        print(list_answer)
+        print('list_prompt: ', list_prompt)
+        print('list_answer: ', list_answer)
+        print('\n')
 
         # obstacles
         with open(os.path.join(path_output_obs, img_filename_only + '.txt'), 'w') as fid:
-            fid.write(list_answer[0])
+            fid.write(list_answer[1])
 
         # actions - llava
         with open(os.path.join(path_output_action_llava, img_filename_only + '.txt'), 'w') as fid:
-            fid.write(list_answer[1])
+            fid.write(list_answer[0])
 
     return
    

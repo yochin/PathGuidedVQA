@@ -145,7 +145,6 @@ class LargeMultimodalModels():
                 encoded_image = encode_image_to_base64(image_path[0])
                 # OpenAI API 키 설정 (환경 변수에서 가져옴)
                 openai.api_key = self.OPENAI_API_KEY
-
                 
                 completion = openai.chat.completions.create(
                     #model = "gpt-4",
@@ -163,20 +162,19 @@ class LargeMultimodalModels():
                     model="gpt-4-vision-preview",
                     messages=[
                         {"role": "system", "content": list_system[0]},
-                        {"role": "user", 
-                         "content": [
-                             {
-                                "type": "text", 
-                                "text": list_prompt[0]
-                             },
-                             {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{encoded_image}",
-                                    "detail": "high"    # "low", "high", "auto"
-                                }
-                             } #, "mimetype": "image/jpeg"
-                         ]
+                        {"role": "user", "content": [
+                                                        {
+                                                            "type": "text", 
+                                                            "text": list_prompt[0]
+                                                        },
+                                                        {
+                                                            "type": "image_url",
+                                                            "image_url": {
+                                                                "url": f"data:image/jpeg;base64,{encoded_image}",
+                                                                "detail": "high"    # "low", "high", "auto"
+                                                            }
+                                                        } #, "mimetype": "image/jpeg"
+                                                    ]
                         }
                     ],
                     max_tokens=1024,

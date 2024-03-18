@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, balanced_accuracy_score
 import json
 import os
 import pdb
@@ -217,9 +217,21 @@ def main():
 
     list_filename = []
 
-    if use_w2v:
-        # 모델 로딩 예시 (실제 경로를 지정해야 함)
-        w2v_model = KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True)
+    
+    # predicted as: A) Go straight, B) Go left 45, C) Go right 45, D) Stop.
+    # labeled gt as: 'go 0', 'go -45', 'go 45', 'stop'
+    list_labels = ['go 0', 'go -45', 'go 45', 'stop']
+    list_label_cues1 = ['straight', 'left', 'right', 'wait']
+    list_label_cues2 = ['a)', 'b)', 'c)', 'd)']
+
+    # # A) Go right 45, B) Stop, C) Go straight, D) Go left 45
+    # list_labels = ['go 45', 'stop', 'go 0', 'go -45']
+    # list_label_cues1 = ['right', 'stop', 'straight', 'left']
+    # list_label_cues2 = ['a)', 'b)', 'c)', 'd)']
+
+    # if use_w2v:
+    #     # 모델 로딩 예시 (실제 경로를 지정해야 함)
+    #     w2v_model = KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True)
 
     # read the list of answer files
     files = os.listdir(path_to_gt)
@@ -231,106 +243,121 @@ def main():
         dict_gt = read_gt(path_gt_file)
 
         # about action
-        gt_act_index = ['go 0', 'go -45', 'go 45', 'stop'].index(dict_gt['act'].strip())
+        gt_act_index = list_labels.index(dict_gt['act'].strip())
 
         with open(os.path.join(path_to_pred_action, filename), 'r') as fid:
             lines_action = fid.read().splitlines()
         str_pred = lines_action[0].lower() 
 
-        # predicted as: A) Go straight, B) Go left 45, C) Go right 45, D) Stop.
-        # labeled gt as: 'go 0', 'go -45', 'go 45', 'stop'
 
         pred_act_index = -1
-        for ith, item in enumerate(['straight', 'left', 'right', 'stop']):
+        for ith, item in enumerate(list_label_cues1):
             if item in str_pred:
                 pred_act_index = ith
         
         if pred_act_index == -1:
-            for ith, item in enumerate(['a)', 'b)', 'c)', 'd)']):
+            for ith, item in enumerate(list_label_cues2):
                 if item in str_pred:
                     pred_act_index = ith
 
+
+        # print(f'filename: {filename}')
+        # print('act_gt: ', dict_gt['act'].strip())
+        # print('act_pred: ', lines_action[0])
+
         if pred_act_index == -1:
-            print(dict_gt['act'])
-            print(lines_action[0])
-            pdb.set_trace()
+            print(f'filename: {filename}')
             pred_act_index = 4
+            # pdb.set_trace()
 
         list_action_gt.append(gt_act_index)
         list_action_pred.append(pred_act_index)
 
-        # about obstacles
-        gt_total_obs = dict_gt['obs_out_list'] + dict_gt['obs_in_list']
+    
+        # # about obstacles
+        # gt_total_obs = dict_gt['obs_out_list'] + dict_gt['obs_in_list']
 
-        with open(os.path.join(path_to_pred_obs, filename), 'r') as fid:
-            lines_obs = fid.read().splitlines()
-        assert len(lines_obs) == 1
-        list_obs_pred = lines_obs[0].split(',')
-        list_obs_pred = [item.lower().strip() for item in list_obs_pred]
+        # with open(os.path.join(path_to_pred_obs, filename), 'r') as fid:
+        #     lines_obs = fid.read().splitlines()
+        # if len(lines_obs) != 1:
+        #     print(f'filename: {filename}')
+        #     pdb.set_trace()
+        # list_obs_pred = lines_obs[0].split(',')
+        # list_obs_pred = [item.lower().strip() for item in list_obs_pred]
 
-        # no obstacles -> ""
-        list_obs_pred = [item.replace("no obstacles", "") for item in list_obs_pred]
+        # # no obstacles -> ""
+        # list_obs_pred = [item.replace("no obstacles", "") for item in list_obs_pred]
 
-        # remove "" items
-        list_removal_word = ['']
-        for rm_word in list_removal_word:
-            while rm_word in list_obs_pred:  
-                list_obs_pred.remove(rm_word)
+        # # remove "" items
+        # list_removal_word = ['']
+        # for rm_word in list_removal_word:
+        #     while rm_word in list_obs_pred:  
+        #         list_obs_pred.remove(rm_word)
 
-            while rm_word in gt_total_obs:  
-                gt_total_obs.remove(rm_word)
+        #     while rm_word in gt_total_obs:  
+        #         gt_total_obs.remove(rm_word)
 
-        # extract nouns
-        list_obs_nouns_gt = []
-        for item in gt_total_obs:
-            extracted_noun = extract_nouns_nltk(item)
+        # # extract nouns
+        # list_obs_nouns_gt = []
+        # for item in gt_total_obs:
+        #     extracted_noun = extract_nouns_nltk(item)
 
-            if len(extracted_noun) > 0:
-                list_obs_nouns_gt.append(extracted_noun[-1])
+        #     if len(extracted_noun) > 0:
+        #         list_obs_nouns_gt.append(extracted_noun[-1])
         
-        list_obs_nouns_pred = []
-        for item in list_obs_pred:
-            extracted_noun = extract_nouns_nltk(item)
+        # list_obs_nouns_pred = []
+        # for item in list_obs_pred:
+        #     extracted_noun = extract_nouns_nltk(item)
 
-            if len(extracted_noun) > 0:
-                list_obs_nouns_pred.append(extracted_noun[-1])
+        #     if len(extracted_noun) > 0:
+        #         list_obs_nouns_pred.append(extracted_noun[-1])
 
-        list_removal_word = ['[', ']']
-        for rm_word in list_removal_word:
-            while rm_word in list_obs_nouns_pred:  
-                list_obs_nouns_pred.remove(rm_word)
+        # list_removal_word = ['[', ']']
+        # for rm_word in list_removal_word:
+        #     while rm_word in list_obs_nouns_pred:  
+        #         list_obs_nouns_pred.remove(rm_word)
 
-            while rm_word in list_obs_nouns_gt:  
-                list_obs_nouns_gt.remove(rm_word)
+        #     while rm_word in list_obs_nouns_gt:  
+        #         list_obs_nouns_gt.remove(rm_word)
 
-        if remove_dup_obstacle:
-            list_obs_nouns_pred = list(set(list_obs_nouns_pred))
-            list_obs_nouns_gt = list(set(list_obs_nouns_gt))
+        # if remove_dup_obstacle:
+        #     list_obs_nouns_pred = list(set(list_obs_nouns_pred))
+        #     list_obs_nouns_gt = list(set(list_obs_nouns_gt))
 
-        if use_w2v:
-            TP, FP, FN = calculate_confusion_matrix_with_similarity(predicted=list_obs_nouns_pred, ground_truth=list_obs_nouns_gt, model=w2v_model)
-        else:
-            TP, FP, FN = calculate_confusion_matrix_with_synonyms(predicted=list_obs_nouns_pred, ground_truth=list_obs_nouns_gt)
-        list_tp.append(TP)
-        list_fp.append(FP)
-        list_fn.append(FN)
+        # if use_w2v:
+        #     TP, FP, FN = calculate_confusion_matrix_with_similarity(predicted=list_obs_nouns_pred, ground_truth=list_obs_nouns_gt, model=w2v_model)
+        # else:
+        #     TP, FP, FN = calculate_confusion_matrix_with_synonyms(predicted=list_obs_nouns_pred, ground_truth=list_obs_nouns_gt)
+        # list_tp.append(TP)
+        # list_fp.append(FP)
+        # list_fn.append(FN)
 
-        print('\n')
-        print(filename)
-        print(list_obs_nouns_gt)
-        print(list_obs_nouns_pred)
-        print(TP, FP, FN)
+        # print(f'list_obs_nouns_gt: {list_obs_nouns_gt}')
+        # print(f'list_obs_nouns_pred: {list_obs_nouns_pred}')
+        # print('TP, FP, FN: ', TP, FP, FN)
 
         list_filename.append(filename)
     
     precision, recall, f1 = calculate_precision_recall(sum(list_tp), sum(list_fp), sum(list_fn))
     print(f1, precision, recall)
 
+    import matplotlib.pyplot as plt
+    import numpy as np
+    print(plt.hist(list_action_gt, bins=[0, 1, 2, 3, 4, 5]))
+    print(plt.hist(list_action_pred, bins=[0, 1, 2, 3, 4, 5]))
+
+
     # 일치하는 요소의 개수 계산
-    correct_predictions = sum(t == p for t, p in zip(list_action_gt, list_action_pred))
-    # 정확도 계산
-    accuracy = correct_predictions / len(list_action_gt)
+    # correct_predictions = sum(t == p for t, p in zip(list_action_gt, list_action_pred))
+    # accuracy = correct_predictions / len(list_action_gt)
+    accuracy = accuracy_score(list_action_gt, list_action_pred)
+    baccuracy = balanced_accuracy_score(list_action_gt, list_action_pred)
     print('accuracy: ', accuracy)
+    print('baccuracy: ', baccuracy)
+
+    print('list_action_gt  : ', list_action_gt)
+    print('list_action_pred: ', list_action_pred)
+
 
 
 if __name__ == '__main__':
