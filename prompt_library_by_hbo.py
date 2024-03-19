@@ -191,12 +191,48 @@ def get_prompt_by_hbo(goal_label_cxcy, bboxes, trial_num, sep_system=False):
         list_prompt = [' '.join(list_prompt)]
 
         list_prompt.append(
-            f'Based on the description, choose the appropriate action to reach the destination at the first from the following options: '
-            f'\'Go straight to the center\', \'Go diagonally to the left\', \'Go diagonally to the right\', and \'Stop\'. '
-            'If there\'s a possibility of danger to visually impaired people, do not hesitate to do \'Stop\'. '
+            'Based on the description, choose the appropriate action to reach the destination at the first from the following options: '
+            '\'Go straight to the center\', \'Go diagonally to the left\', \'Go diagonally to the right\', and \'Stop\'. '
+            'Say only the answer. If there\'s a potential danger for the user, do not hesitate to choose \'Stop\' option. '
         )
         list_prompt.append(
             'Based on the description, what obstacles are on the path? List one by one. Say only the answer. Use a comma as a separator. If there is no obstacles, say "no obstacles".')
+
+    elif trial_num in [91158]:  # two-turn query
+        if sep_system:
+            list_system.append(
+                'A chat between a human and an AI that understands visuals in English. '
+                'In images, [x, y] denotes points: top-left [0.0, 0.0], bottom-right [1.0, 1.0]. '
+                'Increasing x moves right; y moves down. Decreasing x moves left; y moves up. Bounding box: [x1, y1, x2, y2]. '
+                'Image size: 1.0x1.0.'
+                "The input image depicts the view from a pedestrian's position, taken at a point 80cm above the ground for pedestrian navigation purposes. "
+                "The user is looking at the center [0.5, 0.5] of the image. "
+                "Consider the starting point as the ground where the user is standing. "
+                "Explain as if you were a navigation assistant explaining to a visually impaired person. "
+                "Don't talk about detailed image coordinates. Consider perspective view of the 2D image property.\n"
+                )
+            list_system = [' '.join(list_system)]
+        else:
+            raise AssertionError('Unsupported')
+
+        str_dir = get_direction(goal_cxcy[0])
+        if len(bboxes) > 0:
+            list_prompt.append((f"The image contains objects, {bbox_list_str}.\n"))
+        list_prompt.append(f'First, describe the overall photo from near to far.')
+        list_prompt.append(
+            'The horizontal direction of the destination is ' + str_dir + ' from the user.'
+            f'Second, explain the path to the destination, {dest_descriptions}, paying attention to obstacles along the path in 1 line. '
+        )
+        list_prompt = [' '.join(list_prompt)]
+
+        list_prompt.append(
+            'Based on the description, choose the appropriate action to reach the destination from the following options: '
+            '\'Go straight to the center\', \'Go diagonally to the left\', \'Go diagonally to the right\', and \'Stop\'. '
+            'Say only the answer. If the user needs to wait first, the \'Stop\' option must be chosen for safety. '
+        )
+        list_prompt.append(
+            'Based on the description, what obstacles are on the path? List one by one. Say only the answer. Use a comma as a separator. If there is no obstacles, say "no obstacles".')
+
 
     else:
         raise AssertionError(f'{trial_num} is not supported')
