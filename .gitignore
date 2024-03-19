@@ -38,3 +38,4 @@ run_yochin.sh
 eval/clipscore/__pycache__/generation_eval_utils.cpython-310.pyc
 eval/clipscore/__pycache__/generation_eval_utils.cpython-311.pyc
 GoogleNews-vectors-negative300.bin.gz
+__pycache__/prompt_library_by_hbo.cpython-310.pyc

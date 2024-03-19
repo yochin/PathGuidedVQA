@@ -220,9 +220,16 @@ def main():
     
     # predicted as: A) Go straight, B) Go left 45, C) Go right 45, D) Stop.
     # labeled gt as: 'go 0', 'go -45', 'go 45', 'stop'
-    list_labels = ['go 0', 'go -45', 'go 45', 'stop']
-    list_label_cues1 = ['straight', 'left', 'right', 'wait']
-    list_label_cues2 = ['a)', 'b)', 'c)', 'd)']
+    # list_labels = ['go 0', 'go -45', 'go 45', 'stop']
+    # list_label_cues1 = ['straight', 'left', 'right', 'stop']
+    # list_label_cues2 = ['a)', 'b)', 'c)', 'd)']
+
+    list_label_to_cues = {
+        'go 0': ['straight', 'a)'],
+        'go -45': ['left', 'b)'],
+        'go 45': ['right', 'c)'],
+        'stop': ['stop', 'd)', 'wait']
+    }
 
     # # A) Go right 45, B) Stop, C) Go straight, D) Go left 45
     # list_labels = ['go 45', 'stop', 'go 0', 'go -45']
@@ -243,22 +250,30 @@ def main():
         dict_gt = read_gt(path_gt_file)
 
         # about action
-        gt_act_index = list_labels.index(dict_gt['act'].strip())
+        # gt_act_index = list_labels.index(dict_gt['act'].strip())
+        gt_act_index = [*list_label_to_cues.keys()].index(dict_gt['act'].strip())
 
         with open(os.path.join(path_to_pred_action, filename), 'r') as fid:
             lines_action = fid.read().splitlines()
-        str_pred = lines_action[0].lower() 
-
+        str_pred = lines_action[0].lower()      # the first line
+        str_pred = str_pred.split(',')[0]       # the answer at the first step 
 
         pred_act_index = -1
-        for ith, item in enumerate(list_label_cues1):
-            if item in str_pred:
-                pred_act_index = ith
-        
-        if pred_act_index == -1:
-            for ith, item in enumerate(list_label_cues2):
+        for ith, items in enumerate([*list_label_to_cues.values()]):
+            for item in items:
                 if item in str_pred:
                     pred_act_index = ith
+                    break
+
+
+        # for ith, item in enumerate(list_label_cues1):
+        #     if item in str_pred:
+        #         pred_act_index = ith
+        
+        # if pred_act_index == -1:
+        #     for ith, item in enumerate(list_label_cues2):
+        #         if item in str_pred:
+        #             pred_act_index = ith
 
 
         # print(f'filename: {filename}')
