@@ -95,10 +95,13 @@ def main():
             list_prompt.append(f'{answer}\n Based on the description, what action is now recommended to get the destination? Choose from the following options. A) Go straight, B) Move forward slightly to the left, C) Move forward slightly to the right, D) Wait. Say only the answer.')
         elif args.prompt_id == 2158:
             list_prompt.append(f'{answer}\n Based on the description, what action is now recommended to get the destination? Choose from the following options. Go straight, Move forward slightly to the left, Move forward slightly to the right, Wait. Say only the answer.')
+        elif args.prompt_id == 3118:
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended at the first step and at the second step? Choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Say only the answer.')
+        elif args.prompt_id == 3158:
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended at the first step and at the second step? Choose from the following options. Go straight, Go left 45, Go right 45, Stop. Say only the answer.')
 
         list_prompt.append(f'{answer}\n Based on the description, what obstacles are on the path? List one by one. Say only the answer. Use a comma as a separator. If there is no obstacles, say "no obstacles".')
-
-        
+            
         if use_llava:
             set_seed(42)
             input_temperature = 0.6
