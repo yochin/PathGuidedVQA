@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pdb
 import os
 import random
+import numpy as np
 
 from setGP import read_anno, get_gp, split_images, remove_outer_bbox, clamp, reorigin_bbox_point
 from tools import read_text, dict_to_xml, save_xml
@@ -118,7 +119,43 @@ def load_examples(path_to_base):
 
     return list_images, list_prompt_ex
 
+def get_object_depth_value_from_npy(depth_map, bbox_info):
+    # bbox = [label, [x_min, y_min, x_max, y_max], score]
 
+    depth_map_height, depth_map_width = depth_map.shape
+    label = bbox_info[0]
+    x_min, y_min, x_max, y_max = bbox_info[1]
+
+    ix_min, ix_max = int(round(depth_map_width * x_min)), int(round(depth_map_width * x_max))
+    iy_min, iy_max = int(round(depth_map_height * y_min)), int(round(depth_map_height * y_max))
+    if ix_max-ix_min == 0: ix_max = ix_max+1
+    if iy_max-iy_min == 0: iy_max = iy_max+1
+    min_depth = np.round(np.min(depth_map[iy_min:iy_max, ix_min:ix_max]).item(), 3).item()
+
+    return min_depth
+
+def get_point_depth_value_from_npy(depth_map, gp_x, gp_y):
+
+    depth_map_height, depth_map_width = depth_map.shape
+
+    ix = int(round(depth_map_width * gp_x))
+    iy = int(round(depth_map_height * gp_y))
+
+    if ix >= depth_map_width: ix = depth_map_width-1
+    if iy >= depth_map_height: iy = depth_map_height-1
+
+    min_depth = np.round(np.min(depth_map[iy, ix]).item(), 3).item()
+
+    return min_depth
+
+def expand_bboxes_with_depth(bboxes, depth_vals):
+
+    res_bboxes_with_depth = []
+    for i in range(len(bboxes)):
+        label, [x_min, y_min, x_max, y_max], score = bboxes[i]
+        res_bboxes_with_depth.append([label, [x_min, y_min, x_max, y_max, depth_vals[i]], score])
+
+    return res_bboxes_with_depth
 
 # Assisted by ChatGPT 4
 def main():
@@ -131,10 +168,12 @@ def main():
     # anno_path2 = os.path.join(args.db_dir, 'det_anno_toomuch')
     anno_path2 = None
     anno_path_gt = os.path.join(args.db_dir, 'det_anno_gt')
+    depth_dir = os.path.join(args.db_dir, 'depth_anything')
 
     label_path_removal = os.path.join(args.db_dir, 'removal_labels.txt')
     label_path_gp = os.path.join(args.db_dir, 'gp_labels.txt')
     anno_path_gp = os.path.join(args.db_dir, 'anno')
+
 
     use_gp = 'anno'
     if not os.path.exists(label_path_gp):
@@ -207,6 +246,7 @@ def main():
         if anno_path2 is not None:
             xml_path2 = os.path.join(anno_path2, img_file_wo_ext + '.xml')
         xml_path_gt = os.path.join(anno_path_gt, img_file_wo_ext + '.xml')
+        depth_path = os.path.join(depth_dir, img_file_wo_ext + '.npy')
      
         # 이미지를 열고
         img = Image.open(img_path)
@@ -228,6 +268,12 @@ def main():
         list_labels_removal = read_text(label_path_removal)
         bboxes = [item for item in bboxes if item[0] not in list_labels_removal]
 
+        # for depth from depth-anything
+        # If you don't want to use the depth information, comment these lines
+        depth_map = np.load(depth_path)
+        depth_vals = [get_object_depth_value_from_npy(depth_map, bbox) for bbox in bboxes]
+        bboxes = expand_bboxes_with_depth(bboxes, depth_vals)
+
         # 2. set goal position
         if use_gp == 'det':
             list_labels_gps = get_gp(bboxes, list_goal_names, return_as_bbox=return_as_bbox)  # list of [label_name, [cx, cy]]
@@ -240,7 +286,12 @@ def main():
             cx, cy = lines[0].split(' ')
             cx = float(cx) / whole_width
             cy = float(cy) / whole_height
-            list_labels_gps = [['point', [cx, cy]]]
+
+            # default
+            #list_labels_gps = [['point', [cx, cy]]]
+            # with depth
+            cz = get_point_depth_value_from_npy(depth_map, cx, cy)
+            list_labels_gps = [['point', [cx, cy, cz]]]
                 
         list_queries = []
         list_descriptions = []
@@ -264,7 +315,7 @@ def main():
                 list_img_path = [img_path]
                 list_example_prompt = []
 
-            final_query, final_description = lvm.describe_whole_images_with_boxes(list_img_path, bboxes, goal_label_cxcy, 
+            final_query, final_description = lvm.describe_whole_images_with_boxes(list_img_path, bboxes, goal_label_cxcy,
                                                                                   step_by_step=True, 
                                                                                   list_example_prompt=list_example_prompt)
 

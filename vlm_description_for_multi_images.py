@@ -65,7 +65,12 @@ class LargeMultimodalModels():
         if self.model_name == 'dummy':
             res_answer = self.describe_all_bboxes_with_dummy()
         elif self.model_name in ['llava', 'ferret', 'llava16', 'llava16_cli', 'chatgpt']:
-            res_query, res_answer = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, step_by_step, self.model_name, list_example_prompt)
+            res_query, res_answer = self.describe_all_bboxes_with_llava(image_path,
+                                                                        bboxes,
+                                                                        goal_label_cxcy,
+                                                                        step_by_step,
+                                                                        self.model_name,
+                                                                        list_example_prompt)
         else:
             raise AssertionError(f'{self.model_name} is not supported!')
         
