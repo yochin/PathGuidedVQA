@@ -4,8 +4,10 @@ from llava.eval.run_llava import init_llava16_model, run_llava16_model
 from llava.serve.cli import init_llava16_model_cli, run_llava16_model_cli
 from llava.conversation import conv_templates
 from transformers import set_seed
-from prompt_library import get_prompt
-from prompt_library_by_hbo import get_prompt_by_hbo
+# from prompt_library import get_prompt
+# from prompt_library_by_hbo import get_prompt_by_hbo
+import sys
+import importlib
 import pdb
 
 
@@ -15,14 +17,18 @@ def encode_image_to_base64(image_path):
     
 
 class LargeMultimodalModels():
-    def __init__(self, model_name=None, llava_model_base_path=None, llava_model_path=None, ferret_model_path=None, prompt_id=18):
+    def __init__(self, model_name=None, llava_model_base_path=None, llava_model_path=None, ferret_model_path=None, prompt_lib_name=None):
         self.possible_models = ['dummy', 'llava', 'chatgpt', 'ferret', 'llava16', 'llava16_cli']
 
         self.model_name = model_name
-        self.prompt_id = prompt_id
-        print('@LargeMultimodalModels - prompt_id: ', prompt_id)
 
         assert self.model_name in self.possible_models
+        assert prompt_lib_name is not None
+        
+        if 'prompt_lib' not in sys.path:
+            sys.path.append('prompt_lib')
+
+        self.prompt_library = importlib.import_module(prompt_lib_name)
 
         # for gpt4
         if self.model_name == 'chatgpt':
@@ -50,11 +56,13 @@ class LargeMultimodalModels():
             self.ferret_model_path = ferret_model_path
         
 
-    def describe_whole_images_with_boxes(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, list_example_prompt=[]):
+    def describe_whole_images_with_boxes(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, list_example_prompt=[], 
+                                         prompt_id=18, prefix_prompt=None):
         print('\n')
         print('@describe_whole_images_with_boxes - image_path:', image_path)
         print('@describe_whole_images_with_boxes - bboxes:', bboxes)
         print('@describe_whole_images_with_boxes - goal_label_cxcy:', goal_label_cxcy)
+        print('@describe_whole_images_with_boxes - prompt_id: ', prompt_id)
 
         if len(list_example_prompt) > 0:
             assert self.model_name == 'llava16_cli'
@@ -65,7 +73,8 @@ class LargeMultimodalModels():
         if self.model_name == 'dummy':
             res_answer = self.describe_all_bboxes_with_dummy()
         elif self.model_name in ['llava', 'ferret', 'llava16', 'llava16_cli', 'chatgpt']:
-            res_query, res_answer = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, step_by_step, self.model_name, list_example_prompt)
+            res_query, res_answer = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, step_by_step, self.model_name, 
+                                                                        list_example_prompt, prompt_id, prefix_prompt)
         else:
             raise AssertionError(f'{self.model_name} is not supported!')
         
@@ -126,14 +135,21 @@ class LargeMultimodalModels():
     #     return answer
 
     
-    def describe_all_bboxes_with_llava(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, model_name=None, list_example_prompt=[]):
+    def describe_all_bboxes_with_llava(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, model_name=None, 
+                                       list_example_prompt=[], prompt_id=18, prefix_prompt=None):
         set_seed(42)
         input_temperature = 0.6
         input_top_p = 0.9
 
         if step_by_step:
-#            list_prompt, list_system = get_prompt(goal_label_cxcy, bboxes, trial_num=self.prompt_id, sep_system=True)
-            list_prompt, list_system = get_prompt_by_hbo(goal_label_cxcy, bboxes, trial_num=self.prompt_id, sep_system=True)
+            # if prompt_id in [91118, 91148]:
+            #     list_prompt, list_system = get_prompt_by_hbo(goal_label_cxcy, bboxes, trial_num=prompt_id, sep_system=True)
+            # else:
+            #     list_prompt, list_system = get_prompt(goal_label_cxcy, bboxes, trial_num=prompt_id, sep_system=True)
+            list_prompt, list_system = self.prompt_library.get_prompt(goal_label_cxcy, bboxes, trial_num=prompt_id, sep_system=True)
+
+            if prefix_prompt is not None:
+                list_prompt = [' '.join(prefix_prompt + list_prompt)]
 
             if model_name == 'llava16_cli':
                 list_answer = run_llava16_model_cli(self.llava_tokenizer, self.llava_model, self.llava_image_processor, self.llava_context_len, self.llava_model_name, 
@@ -141,49 +157,63 @@ class LargeMultimodalModels():
                                                     input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1,
                                                     input_max_new_tokens=512, input_debug=True, list_ex_prompt=list_example_prompt, list_system=list_system,
                                                     use_ex_image=False)
-            
             elif model_name == 'chatgpt':
                 # 이미지를 base64로 인코딩
                 encoded_image = encode_image_to_base64(image_path[0])
                 # OpenAI API 키 설정 (환경 변수에서 가져옴)
                 openai.api_key = self.OPENAI_API_KEY
                 
-                completion = openai.chat.completions.create(
-                    #model = "gpt-4",
-                    #messages=[
-                    #    {
-                    #        "role": "user",
-                    #        "content": prompt,
-                    #    },
-                    # model="gpt-4-1106-preview",
-                    # messages=[
-                    #     {"role": "system", "content": list_system[0]},
-                    #     {"role": "user", "content": encoded_image}, #, "mimetype": "image/jpeg"
-                    #     {"role": "user", "content": list_prompt[0]},
-                    # ],
-                    model="gpt-4-vision-preview",
-                    messages=[
-                        {"role": "system", "content": list_system[0]},
-                        {"role": "user", "content": [
-                                                        {
-                                                            "type": "text", 
-                                                            "text": list_prompt[0]
-                                                        },
-                                                        {
-                                                            "type": "image_url",
-                                                            "image_url": {
-                                                                "url": f"data:image/jpeg;base64,{encoded_image}",
-                                                                "detail": "high"    # "low", "high", "auto"
-                                                            }
-                                                        } #, "mimetype": "image/jpeg"
-                                                    ]
+                list_answer = []
+                messages = [
+                    {"role": "system", "content": list_system[0]}
+                ]
+
+                for query in list_prompt:
+                    print(f'@gpt - automatic user input: {query}')
+
+                    user_content = [
+                        {
+                            "type": "text", 
+                            "text": query
                         }
-                    ],
-                    max_tokens=1024,
-                )
-                answer = completion.choices[0].message.content
-                list_answer = [answer]
-                        
+                    ]
+                    if encoded_image is not None:
+                        user_content.append(
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{encoded_image}",
+                                    "detail": "high"    # "low", "high", "auto"
+                                }
+                            } #, "mimetype": "image/jpeg"
+                        )
+                        encoded_image = None
+
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": user_content
+                        }
+                    )
+
+                    completion = openai.chat.completions.create(
+                        model="gpt-4-vision-preview",
+                        messages=messages,
+                        max_tokens=1024,
+                    )
+                    answer = completion.choices[0].message.content
+
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": answer
+                        }
+                    )
+
+                    list_answer.append(answer)
+
+                    # print("\n", {"prompt": prompt, "outputs": outputs}, "\n")
+            
             else:
                 list_answer = []
                 for i_prompt, prompt in enumerate(list_prompt):
@@ -244,3 +274,36 @@ class LargeMultimodalModels():
         # print('answer: ', res_answer)
 
         return prompt, res_answer
+
+
+import os
+import pdb
+
+if __name__ == '__main__':
+    llava_model_base_path = None
+    llava_model_path = '../llm_models/llava/llava-v1.6-34b'
+    vlm_model_name = 'llava16_cli'
+
+    lvm = LargeMultimodalModels(vlm_model_name, llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path)
+
+    
+    ppt_id = 45101
+
+    prefix_prompt = None
+
+    output_path_debug = '../output/HBO_B91118_MASK_10mPtr_CamInt_LLMDec_debug/debug'
+
+    filename = ''
+    ppt_c = 'D'
+    ext = '.jpg'
+    ppt_id_list_img_path = [os.path.join(output_path_debug, f'{filename}_{ppt_c}{ext}')]
+    list_prompt = ['Explain the destination, represented by a orange point [0.4343, 0.4143] in 1 line. Example 1) The destination is an entrance of a building. Example 2) The destination is in the middle of the pedestrian road. ']
+    
+    ppt_bboxes = []
+
+    ppt_id_list_img_path = [os.path.join(output_path_debug, f'MP_SEL_075205_D.jpg')]
+    list_answer = run_llava16_model_cli(lvm.llava_tokenizer, lvm.llava_model, lvm.llava_image_processor, lvm.llava_context_len, lvm.llava_model_name, image_files=ppt_id_list_img_path, list_queries=list_prompt, input_conv_mode=lvm.llava_input_conv_mode, input_temperature=0.6, input_top_p=0.9, input_num_beams=1, input_max_new_tokens=512, input_debug=True, use_ex_image=False)
+    
+
+    
+    pdb.set_trace()

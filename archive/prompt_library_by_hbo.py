@@ -86,7 +86,6 @@ def get_prompt_by_hbo(goal_label_cxcy, bboxes, trial_num, sep_system=False):
             list_system = [' '.join(list_system)]
         else:
             raise AssertionError('Unsupported')
-        list_prompt = [' '.join(list_prompt)]
 
         str_dir=get_direction(goal_cxcy[0])
         # Summarize prompt

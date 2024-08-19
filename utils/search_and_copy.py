@@ -1,7 +1,7 @@
 import os
 import shutil
 
-def copy_file(source_folder, destination_folder, file_name, do_copy=True):
+def copy_file(source_folder, destination_folder, file_name, do_copy=True, then_remove=False):
     """
     주어진 파일명을 사용하여 소스 폴더에서 파일을 찾고, 찾은 경우 대상 폴더로 복사합니다.
 
@@ -19,7 +19,10 @@ def copy_file(source_folder, destination_folder, file_name, do_copy=True):
 
             # 파일을 대상 폴더로 복사
             if do_copy:
-                shutil.copy(source_file_path, destination_file_path)
+                # shutil.copy(source_file_path, destination_file_path)    # file + permission
+                shutil.copyfile(source_file_path, destination_file_path)    # file only
+            if then_remove:
+                os.remove(source_file_path)
             print(f"'{file_name}' has been copied to '{destination_folder}'.")
             break
     else:
@@ -27,29 +30,42 @@ def copy_file(source_folder, destination_folder, file_name, do_copy=True):
         print(f"'{file_name}' not found in '{source_folder}'.")
 
 
+# 1. List up the files in the reference folder
+# 2. Find and copy the files those are in the ref. from the source folder to dest folder
+
+
 if __name__ == '__main__':   
-    # source_image_folder = '../val100_yochin/images'    
-    source_image_folder = '../val100_hbo/images'
+    ref_file_folder = '/media/NAS_GDHRI/dbs/PathGuidedVQA/2024.08.06/DestMasking_DrawDepthPoint_FewExample_DecGPT_SumLLama38binst_DBval20k_Try2/qa'
+    ref_file_ext = ('.xml')
 
-    # source_anno_folder = '/home/yochin/Desktop/GLIP/OUTPUT_gd/aihub_pwalkDB_with_gd_labels_using_yolo_detector_train852/pred_pascal'
-    # source_anno_folder = '/home/yochin/Desktop/GLIP/OUTPUT_gd/gdDB_with_aihub_labels_using_yolo_detector_train958/pred_pascal'
-    # destination_anno_folder = '../val100_hbo/det_anno_pred'
-
-    # source_anno_folder = '/media/NAS_GDHRI/dbs/aihub_pwalk/organized/Annotations'
-    source_anno_folder = '/media/NAS_GDHRI/dbs/naeultech_231109/organized/Annotations'
-    destination_anno_folder = '../val100_hbo/det_anno_gt'
+    source_file_folder = '/home/yochin/Desktop/PathGuidedVQA_Base/val20k/original_images'     
+    destination_file_folder = '/media/NAS_GDHRI/dbs/PathGuidedVQA/2024.08.06/DestMasking_DrawDepthPoint_FewExample_DecGPT_SumLLama38binst_DBval20k_Try2/original_images'
+    copied_file_ext = ('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.JPG', '.PNG', '.JPEG')
 
     do_copy = True     # if False, just show the copy info.
+    then_remove = False
 
-    # 소스 폴더에서 파일 목록 가져오기
-    list_img_files = [f for f in os.listdir(source_image_folder) if os.path.isfile(os.path.join(source_image_folder, f))]
+    # ref 폴더에서 파일 목록 가져오기
+    list_img_files = [f for f in os.listdir(ref_file_folder) if os.path.isfile(os.path.join(ref_file_folder, f))]
 
     # 각 파일을 대상 폴더로 복사
     for file_name in list_img_files:
         # 파일 확장자 확인 (예: '.jpg', '.png')
-        if file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
-            filename_xml = os.path.splitext(file_name)[0] + '.xml'
+        if file_name.lower().endswith(ref_file_ext):
+
+            file_exist = False
+
+            for item_ext in copied_file_ext:
+                copied_filename_ext = os.path.splitext(file_name)[0] + item_ext
+
+                if os.path.exists(os.path.join(source_file_folder, copied_filename_ext)):
+                    file_exist = True
+                    break
+
             
-            # 함수 호출
-            copy_file(source_anno_folder, destination_anno_folder, filename_xml, do_copy=do_copy)
+            if file_exist:
+                # 함수 호출
+                copy_file(source_file_folder, destination_file_folder, copied_filename_ext, do_copy=do_copy, then_remove=then_remove)
+            else:
+                raise AssertionError(f'{copied_filename_ext} is not exist in {source_file_folder}')
             

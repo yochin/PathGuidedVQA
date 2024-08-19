@@ -30,6 +30,12 @@ def save_xml(xml_element, filename):
     tree.write(filename, encoding='utf-8', xml_declaration=True)
 
 
+import json
+def save_json(dict_info, filename):
+    with open(filename, 'w') as fp:
+        json.dump(dict_info, fp, indent=4)
+
+
 def read_gt_pair_from_xml(xml_file_path):
 
     tree = ET.parse(xml_file_path)

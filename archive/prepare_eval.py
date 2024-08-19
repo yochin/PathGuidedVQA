@@ -4,6 +4,7 @@ import argparse
 import openai
 from llava.serve.cli import init_llava16_model_cli, run_llava16_model_cli
 from transformers import set_seed
+import tiktoken
 
 from tools import read_gt_pair_from_xml
 import pdb
@@ -66,7 +67,7 @@ def main():
     for xml_file in xml_files:
         xml_path = os.path.join(args.gt_dir, xml_file)
         img_filename, answer = read_gt_pair_from_xml(xml_path)
-
+        
         img_filename_only = os.path.splitext(img_filename)[0]
 
         # # debug, temp
@@ -77,14 +78,22 @@ def main():
         for rem in list_removal_tokens:
             answer = answer.replace(rem, '')
 
-        # actions - word matching
-        l_answer = answer.lower()
+        
+        enc = tiktoken.get_encoding("cl100k_base")
+        ans_enc = enc.encode(answer)
+        print('len_enc : ', len(ans_enc))
+
+        if len(ans_enc) > 3000:
+            print('length reduced')
+            answer = enc.decode(ans_enc[:3000])
+
+
 
         # actions, obstacles - using llm
         list_prompt = []
         
         if args.prompt_id == 1118:
-            list_prompt.append(f'{answer}\n Based on the description, what action is recommended? Choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Say only the answer.')
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended? Choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Say only the answer.')            
         elif args.prompt_id == 11118:
             list_prompt.append(f'{answer}\n Based on the description, what action is recommended? Choose from the following options. A) Go right 45, B) Stop, C) Go straight, D) Go left 45. Say only the answer.')
         elif args.prompt_id == 1158:
@@ -99,6 +108,16 @@ def main():
             list_prompt.append(f'{answer}\n Based on the description, what action is recommended at the first step and at the second step? Choose from the following options. A) Go straight, B) Go left 45, C) Go right 45, D) Stop. Say only the answer.')
         elif args.prompt_id == 3158:
             list_prompt.append(f'{answer}\n Based on the description, what action is recommended at the first step and at the second step? Choose from the following options. Go straight, Go left 45, Go right 45, Stop. Say only the answer.')
+        elif args.prompt_id == 41819:
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended at the first step and at the second step? Choose from the following options: '
+                               '\'A) Go straight to the center\', \'B) Go diagonally to the left\', \'C) Go diagonally to the right\', \'D) Stop and wait\'. Say only the answer.')
+        elif args.prompt_id == 41859:
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended at the first step and at the second step? Choose from the following options: '
+                               '\'Go straight to the center\', \'Go diagonally to the left\', \'Go diagonally to the right\', \'Stop and wait\'. Say only the answer.')
+        elif args.prompt_id == 4118:
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended? Choose from the following options. A) Go straight with or without slight curving, B) Go left 45, C) Go right 45, D) Stop or wait. Say only the answer.')
+        elif args.prompt_id == 4119:
+            list_prompt.append(f'{answer}\n Based on the description, what action is recommended? Choose from the following options. A) Go straight with or without slight curving, B) Go to the pink border, C) Go to the purple border, D) Stop or wait. Say only the answer.')
 
         list_prompt.append(f'{answer}\n Based on the description, what obstacles are on the path? List one by one. Say only the answer. Use a comma as a separator. If there is no obstacles, say "no obstacles".')
             
@@ -116,20 +135,23 @@ def main():
 
         if use_gpt:
             list_answer = []
-            for prompt in list_prompt:
-                response = openai.chat.completions.create(
-                    # model="gpt-4",
-                    model='gpt-3.5-turbo',
-                    messages=[
-                        {
-                            "role": "user", 
-                            "content": prompt,
-                        }
-                    ],
-                    max_tokens=1024,
-                )
-                answer = response.choices[0].message.content
-                list_answer.append(answer)
+            try:
+                for prompt in list_prompt:
+                    response = openai.chat.completions.create(
+                        # model="gpt-4",
+                        model='gpt-3.5-turbo',
+                        messages=[
+                            {
+                                "role": "user", 
+                                "content": prompt,
+                            }
+                        ],
+                        max_tokens=1024,
+                    )
+                    answer = response.choices[0].message.content
+                    list_answer.append(answer)
+            except:
+                list_answer = ['error', 'error']
 
         print('list_prompt: ', list_prompt)
         print('list_answer: ', list_answer)

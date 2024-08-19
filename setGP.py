@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 import numpy as np
 import pdb
+import os
 
 
 def calculate_iou(box1, box2):
@@ -147,41 +148,42 @@ def read_anno(path_to_xml, rescaling=False, filtering_score=-1.0):
     res_bboxes = []
 
     # XML 파일을 파싱하여 Bounding Box 정보를 가져옴
-    tree = ET.parse(path_to_xml)
-    root = tree.getroot()
-
-    if rescaling:
-        w_org = float(root.find('size').find('width').text)
-        h_org = float(root.find('size').find('height').text)
-
-    for obj in root.iter('object'):
-        bbox = obj.find('bndbox')
-        x_min = float(bbox.find('xmin').text)
-        y_min = float(bbox.find('ymin').text)
-        x_max = float(bbox.find('xmax').text)
-        y_max = float(bbox.find('ymax').text)
+    if os.path.exists(path_to_xml):
+        tree = ET.parse(path_to_xml)
+        root = tree.getroot()
 
         if rescaling:
-            x_min = clamp((float(x_min) / w_org), 0, 1)
-            y_min = clamp((float(y_min) / h_org), 0, 1)
-            x_max = clamp((float(x_max) / w_org), 0, 1)
-            y_max = clamp((float(y_max) / h_org), 0, 1)
+            w_org = float(root.find('size').find('width').text)
+            h_org = float(root.find('size').find('height').text)
 
-        x_min = round(x_min, 2)
-        y_min = round(y_min, 2)
-        x_max = round(x_max, 2)
-        y_max = round(y_max, 2)
+        for obj in root.iter('object'):
+            bbox = obj.find('bndbox')
+            x_min = float(bbox.find('xmin').text)
+            y_min = float(bbox.find('ymin').text)
+            x_max = float(bbox.find('xmax').text)
+            y_max = float(bbox.find('ymax').text)
 
-        label = obj.find('name').text
+            if rescaling:
+                x_min = clamp((float(x_min) / w_org), 0, 1)
+                y_min = clamp((float(y_min) / h_org), 0, 1)
+                x_max = clamp((float(x_max) / w_org), 0, 1)
+                y_max = clamp((float(y_max) / h_org), 0, 1)
 
-        if obj.find('score') is not None:
-            score = round(float(obj.find('score').text), 2)
-        else:
-            score = 1.0
+            x_min = round(x_min, 2)
+            y_min = round(y_min, 2)
+            x_max = round(x_max, 2)
+            y_max = round(y_max, 2)
 
-        if score > filtering_score:
-            # add to the return list
-            res_bboxes.append([label, [x_min, y_min, x_max, y_max], score])
+            label = obj.find('name').text
+
+            if obj.find('score') is not None:
+                score = round(float(obj.find('score').text), 2)
+            else:
+                score = 1.0
+
+            if score > filtering_score:
+                # add to the return list
+                res_bboxes.append([label, [x_min, y_min, x_max, y_max], score])
 
     return res_bboxes
 
@@ -200,7 +202,8 @@ def get_gp(list_bboxes, list_goal_objects, return_as_bbox=False):
             if return_as_bbox:
                 res_gps.append([label, bbox])
             else:
-                res_gps.append([label, [(float(bbox[0]+bbox[2])/2.), float(bbox[1]+bbox[3])/2.]])
+                # res_gps.append([label, [(float(bbox[0]+bbox[2])/2.), float(bbox[1]+bbox[3])/2.]])
+                res_gps.append([label, [(float(bbox[0]+bbox[2])/2.), float(bbox[3])]])
 
     return res_gps
 

@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, balanced_accuracy_score
+from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, balanced_accuracy_score, confusion_matrix
 import json
 import os
 import pdb
@@ -16,6 +16,8 @@ from gensim.models import KeyedVectors
 from scipy import spatial
 import numpy as np
 import argparse
+
+import logging
 
 
 def parse_args():
@@ -204,6 +206,21 @@ def main():
     path_to_pred_action = os.path.join(path_to_pred_base, 'eval/pred_action_llava')
     path_to_pred_obs = os.path.join(path_to_pred_base, 'eval/pred_obs')
 
+    # log
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # log - console
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+
+    # log를 파일에 출력
+    file_handler = logging.FileHandler(os.path.join(path_to_pred_base, 'eval_accuracy.txt'))
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
     use_w2v = True
     remove_dup_obstacle = True
 
@@ -226,8 +243,8 @@ def main():
 
     list_label_to_cues = {
         'go 0': ['straight', 'a)'],
-        'go -45': ['left', 'b)'],
-        'go 45': ['right', 'c)'],
+        'go -45': ['left', 'b)', 'pink'],
+        'go 45': ['right', 'c)', 'purple'],
         'stop': ['stop', 'd)', 'wait']
     }
 
@@ -281,13 +298,15 @@ def main():
         # print('act_pred: ', lines_action[0])
 
         if pred_act_index == -1:
-            print(f'filename: {filename}')
+            logger.info(f'filename: {filename}')
             pred_act_index = 4
             # pdb.set_trace()
 
         list_action_gt.append(gt_act_index)
         list_action_pred.append(pred_act_index)
 
+
+        logger.info(f'{gt_act_index} {pred_act_index} {filename}')
     
         # # about obstacles
         # gt_total_obs = dict_gt['obs_out_list'] + dict_gt['obs_in_list']
@@ -354,12 +373,12 @@ def main():
         list_filename.append(filename)
     
     precision, recall, f1 = calculate_precision_recall(sum(list_tp), sum(list_fp), sum(list_fn))
-    print(f1, precision, recall)
+    logger.info(f'{f1}, {precision}, {recall}')
 
     import matplotlib.pyplot as plt
     import numpy as np
-    print(plt.hist(list_action_gt, bins=[0, 1, 2, 3, 4, 5]))
-    print(plt.hist(list_action_pred, bins=[0, 1, 2, 3, 4, 5]))
+    logger.info(plt.hist(list_action_gt, bins=[0, 1, 2, 3, 4, 5]))
+    logger.info(plt.hist(list_action_pred, bins=[0, 1, 2, 3, 4, 5]))
 
 
     # 일치하는 요소의 개수 계산
@@ -367,11 +386,13 @@ def main():
     # accuracy = correct_predictions / len(list_action_gt)
     accuracy = accuracy_score(list_action_gt, list_action_pred)
     baccuracy = balanced_accuracy_score(list_action_gt, list_action_pred)
-    print('accuracy: ', accuracy)
-    print('baccuracy: ', baccuracy)
+    cmat = confusion_matrix(list_action_gt, list_action_pred)
+    logger.info(f'accuracy: {accuracy}')
+    logger.info(f'baccuracy: {baccuracy}')
 
-    print('list_action_gt  : ', list_action_gt)
-    print('list_action_pred: ', list_action_pred)
+    logger.info(f'list_action_gt  : {list_action_gt}')
+    logger.info(f'list_action_pred: {list_action_pred}')
+    logger.info(f'confusion_matrix: \n{cmat}')
 
 
 

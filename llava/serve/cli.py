@@ -64,7 +64,8 @@ def init_llava16_model_cli(model_path, model_base, input_conv_mode=None):
 
 def run_llava16_model_cli(tokenizer, model, image_processor, context_len, model_name,
                           image_files, list_queries, input_conv_mode,
-                          input_temperature=0.2, input_top_p=None, input_num_beams=1, input_max_new_tokens=512, input_debug=True, 
+                          input_temperature=0.2, input_top_p=None, input_num_beams=1, input_max_new_tokens=512, 
+                          input_debug=True, 
                           list_ex_prompt=[], list_system=[], use_ex_image=True):
     if input_temperature == 0:
         torch.use_deterministic_algorithms = True

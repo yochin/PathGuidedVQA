@@ -119,6 +119,190 @@ def load_examples(path_to_base):
     return list_images, list_prompt_ex
 
 
+import json
+def get_points_array(image_path, depth_width, depth_height):
+    json_path = image_path.replace('.jpg', '.json')
+
+    with open(json_path, 'r') as fid:
+        data = json.load(fid)
+
+    if 'No' in data['result']:
+        ret = False
+        path_arr_xy = [[0, 0]]
+    else:
+        ret = True
+        path_arr_yx = data['path']
+        path_arr_xy = [[item[1]/depth_width, item[0]/depth_height] for item in path_arr_yx]
+
+    return ret, path_arr_xy
+
+
+def generate_points(image_path):
+    with Image.open(image_path) as img:
+        image_width, image_height = img.size
+
+    # 이미지의 가로 중간 지점
+    x_center = image_width // 2
+    
+    # 세로는 위에서 2/3 지점
+    y_start = (2 * image_height) // 3
+    
+    # 포인트 배열 생성: 시작점부터 이미지 하단까지
+    points_xy = [[x_center/image_width, y/image_height] for y in range(y_start, image_height)]
+    
+    return points_xy
+
+
+import cv2
+import numpy as np
+def create_thick_line_mask(image, points, thickness):
+    mask = np.zeros_like(image, dtype=np.uint8)
+    
+    # Convert points list to numpy array
+    points = np.array(points, dtype=np.int32).reshape((-1, 1, 2))
+    
+    # Draw thick line on the mask
+    cv2.polylines(mask, [points], isClosed=False, color=(255, 255, 255), thickness=thickness)
+    
+    return mask
+
+def create_circular_mask(image, points, radius):
+    # Initialize mask with zeros (black)
+    mask = np.zeros_like(image, dtype=np.uint8)
+    
+    # Draw white filled circles on the mask at each point
+    for point in points:
+        cv2.circle(mask, center=tuple(point), radius=radius, color=(255, 255, 255), thickness=-1)
+    
+    return mask
+
+
+def gen_mask_v1(cv_img, path_array_xy):
+    img_h, img_w, img_c = cv_img.shape
+
+    mask_left = np.zeros_like(cv_img, dtype=np.uint8)
+    mask_right = np.zeros_like(cv_img, dtype=np.uint8)
+    
+    # Convert points list to numpy array
+    points = np.array(path_array_xy, dtype=np.int32)
+    
+    # Split points into two parts: above and below the line
+    for i in range(1, len(points)):
+        pts = np.array([points[i-1], points[i], [0, img_h], [0, 0]])
+        cv2.fillPoly(mask_left, [pts], (255, 255, 255))
+        
+        pts = np.array([points[i-1], points[i], [img_w, 0], [img_w, img_h]])
+        cv2.fillPoly(mask_right, [pts], (255, 255, 255))
+
+    return mask_left, mask_right
+    
+
+def gen_mask_v2(image, points):
+    mask_left = np.zeros_like(image, dtype=np.uint8)
+    mask_right = np.zeros_like(image, dtype=np.uint8)
+    
+    # Convert points list to numpy array
+    points = np.array(points, dtype=np.int32)
+    
+    # Create a thick line mask
+    line_mask = np.zeros_like(image, dtype=np.uint8)
+    cv2.polylines(line_mask, [points], isClosed=False, color=(255, 255, 255), thickness=10)
+    
+    # Create left and right masks by flood filling from the borders
+    flood_filled_left = line_mask.copy()
+    flood_filled_right = line_mask.copy()
+    
+    # Flood fill from the left and right of the image to create two separate regions
+    cv2.floodFill(flood_filled_left, None, (0, 0), (255, 255, 255))
+    cv2.floodFill(flood_filled_right, None, (image.shape[1] - 1, 0), (255, 255, 255))
+    
+    # Left side mask is where flood_filled_left is white and line_mask is not white
+    mask_left[(flood_filled_left == 255) & (line_mask == 0)] = (255, 255, 255)
+    
+    # Right side mask is where flood_filled_right is white and line_mask is not white
+    mask_right[(flood_filled_right == 255) & (line_mask == 0)] = (255, 255, 255)
+    
+    return mask_left, mask_right
+
+
+def generate_mask(img_path, path_array_xy_norm, line_thickness=50):
+    cv_img = cv2.imread(img_path)
+
+    img_h, img_w, img_c = cv_img.shape
+    path_array_xy = [[x*img_w, y*img_h] for x, y in path_array_xy_norm]
+    points = np.array(path_array_xy, dtype=np.int32)
+
+    mask_left, mask_right = gen_mask_v1(cv_img, path_array_xy)
+
+    mask_path = create_thick_line_mask(cv_img, points, thickness=line_thickness)
+
+    return {'L': mask_left, 
+            'R': mask_right, 
+            'P': mask_path}
+
+def create_trapezoid_mask(img_path, target_point, r):
+    image = cv2.imread(img_path)
+    height, width = image.shape[:2]
+    x, y = target_point
+
+    # Define the trapezoid points
+    top_left = (0, 0)
+    top_right = (width, 0)
+    bottom_left = (max(x - r, 0), y)
+    bottom_right = (min(x + r, width), y)
+    
+    # Create a mask
+    mask = np.zeros_like(image, dtype=np.uint8)
+    
+    # Define the trapezoid as a polygon
+    trapezoid = np.array([top_left, top_right, bottom_right, bottom_left], dtype=np.int32)
+    
+    # Fill the trapezoid area in the mask
+    cv2.fillPoly(mask, [trapezoid], (255, 255, 255))
+        
+    return mask
+    
+
+def save_debug_image(img_path, dict_masks):
+    debug_img_path = img_path.replace('images', 'debug_images')
+
+    debug_img_folder, file_with_ext = os.path.split(debug_img_path)
+    filename, ext = os.path.splitext(file_with_ext)
+
+    cv_img = cv2.imread(img_path)
+
+    if not os.path.exists(debug_img_folder):
+        os.makedirs(debug_img_folder)
+
+    for key, mask in dict_masks.items():
+        path_to_save = os.path.join(debug_img_folder, f'{filename}_{key}{ext}')
+        debug_image = cv2.bitwise_and(cv_img, mask)
+        cv2.imwrite(path_to_save, debug_image)
+
+
+def create_depth_mask(depth_image, target_point, radius, buffer_dist):
+    x, y = target_point
+    height, width = depth_image.shape
+    
+    # Ensure the radius is within the image bounds
+    x_min = max(x - radius, 0)
+    x_max = min(x + radius, width)
+    y_min = max(y - radius, 0)
+    y_max = min(y + radius, height)
+    
+    # Extract the region of interest
+    roi = depth_image[y_min:y_max, x_min:x_max]
+    
+    # Calculate the average depth in the region of interest
+    avg_depth = np.max(roi)
+    thresh_depth = avg_depth + buffer_dist
+    
+    # Create a mask where depth is greater than the average depth
+    mask = np.zeros_like(depth_image, dtype=np.uint8)
+    mask[depth_image < thresh_depth] = 255
+    
+    return mask
+
 
 # Assisted by ChatGPT 4
 def main():
@@ -132,9 +316,10 @@ def main():
     anno_path2 = None
     anno_path_gt = os.path.join(args.db_dir, 'det_anno_gt')
 
-    label_path_removal = os.path.join(args.db_dir, 'removal_labels.txt')
+    label_path_removal = os.path.join(args.db_dir, 'removal_labels.txt')    # if you want to remove some classes in the det_anno.
+    
     label_path_gp = os.path.join(args.db_dir, 'gp_labels.txt')
-    anno_path_gp = os.path.join(args.db_dir, 'anno')
+    anno_path_gp = os.path.join(args.db_dir, 'anno')    # annotation has GP in txt file
 
     use_gp = 'anno'
     if not os.path.exists(label_path_gp):
@@ -167,7 +352,7 @@ def main():
         list_ex_prompt = []
 
     print('@main - prompt_id: ', args.prompt_id)
-    lvm = LargeMultimodalModels(args.model_name, llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path, prompt_id=args.prompt_id)
+    lvm = LargeMultimodalModels(args.model_name, llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path)
 
     choose_one_random_gp = True     # select one random gp when many gps are detected
 
@@ -265,8 +450,9 @@ def main():
                 list_example_prompt = []
 
             final_query, final_description = lvm.describe_whole_images_with_boxes(list_img_path, bboxes, goal_label_cxcy, 
-                                                                                  step_by_step=True, 
-                                                                                  list_example_prompt=list_example_prompt)
+                                                                                    step_by_step=True, 
+                                                                                    list_example_prompt=list_example_prompt,
+                                                                                    prompt_id=args.prompt_id)
 
             output_dict = {
                 'image_filename': img_file,
@@ -297,7 +483,7 @@ def main():
             mid_point_draw = [goal_cxcy[0] * whole_width, goal_cxcy[1] * whole_height]
             mid_point_lu_draw = (int(mid_point_draw[0]-radius), int(mid_point_draw[1]-radius))
             mid_point_rd_draw = (int(mid_point_draw[0]+radius), int(mid_point_draw[1]+radius))
-            draw.ellipse([mid_point_lu_draw, mid_point_rd_draw], fill='red')
+            draw.ellipse([mid_point_lu_draw, mid_point_rd_draw], fill='orange')
 
             # draw detection results
             for label_name, bbox, score in bboxes:
@@ -310,6 +496,7 @@ def main():
             # draw.text((10, whole_height-30), f'a:{final_description}', fill='blue', font=font)
             # draw_long_text(draw, position=(10, whole_height+10), text=f'a:{final_description}', fill='blue', font=font, max_width=whole_width-20) # note at bottom
             draw_long_text(draw, position=(whole_width+10, 10), text=f'a:{final_description}', fill='blue', font=font, max_width=whole_width-20)   # note at right
+            draw_long_text(draw, position=(whole_width+10, int(whole_height/2) + 10), text=f'q:{final_query}', fill='green', font=font, max_width=whole_width-20)   # note at right
             
             path_to_debug = os.path.join(output_path_debug, f'{img_file_wo_ext}_{i_gp}_whole_final.jpg')
             img_note.save(path_to_debug)
