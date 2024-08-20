@@ -1,6 +1,6 @@
 import torch
 # from depth_anything_v2.dpt import DepthAnythingV2
-from Depth_Anything_V2.metric_depth.depth_anything_v2.dpt import DepthAnythingV2
+from depth_anything_v2.metric_depth.depth_anything_v2.dpt import DepthAnythingV2
 
 
 class depth_anything():
