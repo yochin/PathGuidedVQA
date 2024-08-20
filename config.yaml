@@ -1,4 +1,4 @@
-task_name: DestMasking_DrawDepthPoint_FewExample_DecGPT_SumLLama38binst_DBval20k_Valify   # NoAnalyzePrompt_
+task_name: DestMasking_DrawDepthPoint_FewExample_DecGPT_SumLLama38binst_DBval20k_NoDest_YesPath   # NoAnalyzePrompt_
 
 vlm:
     model_name: llava16_cli     # [llava16_cli | chatgpt]
@@ -15,7 +15,7 @@ gpt:
     use_summary: False
     use_decision: True
 
-prompt_lib_name: DLRPathDescDeci
+prompt_lib_name: PathLRPathDescDeci
 
 yolo:
     dynamic_det_path: yolo/WEIGHTS/aihub_pwalk/train852/weights/best.pt

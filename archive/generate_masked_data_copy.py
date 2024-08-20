@@ -16,7 +16,7 @@ from depth_anything_wrapper import depth_anything
 from ultralytics import YOLO
 import torch
 from generate_image_data import depth_lpp, draw_path_on_scaled_image, save_and_visualize_depth_map
-# from prompt_library import get_prompt
+from prompt_library import get_prompt
 from llm_wrapper import llm_wrapper
 from gpt_wrapper import gpt_wrapper
 import pickle
@@ -291,10 +291,8 @@ def get_normalized_click(image):
 
 # Assisted by ChatGPT 4
 def main():
-    # read config file path
     args = parse_args()
 
-    # load all config.
     with open(args.config) as fid:
         conf = yaml.load(fid, Loader=yaml.FullLoader)
 
@@ -318,7 +316,7 @@ def main():
 
     llava_model_base_path = conf['vlm']['llava_model_base_dir']
     llava_model_path = conf['vlm']['llava_model_dir']
-    prompt_lib_name = conf['prompt_lib_name']
+    prompt_id = conf['prompt_id']
     vlm_model_name = conf['vlm']['model_name']
 
     yolo_dynamic_path = conf['yolo']['dynamic_det_path']
@@ -357,13 +355,6 @@ def main():
     dst_masking_circle = conf['dest']['masking_circle']
     dst_draw_bbox = conf['dest']['draw_bbox']
     dst_circle_ratio = conf['dest']['circle_ratio_w']
-
-    import importlib
-
-    if 'prompt_lib' not in sys.path:
-        sys.path.append('prompt_lib')
-
-    prompt_lib = importlib.import_module(prompt_lib_name)
     
     if gp_method == 'load_anno':
         assert os.path.exists(anno_path_gp)
@@ -400,8 +391,8 @@ def main():
     list_ex_images = [] 
     list_ex_prompt = []
 
-    logging.info(f'@main - prompt_lib_name: {prompt_lib_name}')
-    lvm = LargeMultimodalModels(vlm_model_name, llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path, prompt_lib_name=prompt_lib_name)
+    logging.info(f'@main - prompt_id: {prompt_id}')
+    lvm = LargeMultimodalModels(vlm_model_name, llava_model_base_path=llava_model_base_path, llava_model_path=llava_model_path)
 
     if use_llm_decision or use_llm_summary:
         llm_model = llm_wrapper(llm_model_name)
@@ -454,7 +445,7 @@ def main():
         bboxes_gt = read_anno(xml_path_gt, rescaling=True)
         bboxes.extend(bboxes_gt)
 
-        # add detection results of yolov8 detector
+        # add yolov8
         if not os.path.exists(xml_path1) or not os.path.exists(xml_path_gt):
             res_dynamic = yolo_dynamic(img, conf=0.8)
             
@@ -599,7 +590,7 @@ def main():
                 else:
                     res_dict_path = depth_lpp(depth_image, goal_cxcy)    # depth_sized_path is returned
 
-                    # result of depth_lpp
+                    # # Save to dict
                     # res_dict = {
                     #     'res': path_res,                    # Boolean: True or False
                     #     'reason': path_str,                 # String: Success or Failure with a reason
@@ -625,11 +616,24 @@ def main():
                 depth_start_yx = [int(1.0*whole_height), int(0.5*whole_width)]
                 depth_goal_yx = [int(goal_cxcy[1]*whole_height), int(goal_cxcy[0]*whole_width)]
 
+            # # print('before expand_points: ', len(path_array))
+            # # print(path_array)
+            # path_array = expand_points(path_array, 50)
+            # # print('after expand_points: ', len(path_array))
+            # # print(path_array)
+
             path_array_xy = [[
                 np.clip(int(x*whole_width), 0, whole_width-1), 
                 np.clip(int(y*whole_height), 0, whole_height-1)
                 ] for x, y in path_array]
             
+
+
+
+
+
+
+
             # generate masks with left all and right all masks
             dict_masks = generate_mask(cv_org_img_pt, path_array_xy)    # ['L', 'R'], all left and right area along with path.
 
@@ -723,103 +727,120 @@ def main():
             if dst_draw_circle is False and dst_draw_point is False and dst_masking_circle is False and dst_masking_depth is False:
                 save_debug_masked_image(img_path, cv_org_img, {'D': None}, output_path_debug)
 
+    
+
+
+
+
+
+
+
+            # dict_masks_etc = {
+            #     'F': depth_mask,
+            # }
+            # save_debug_masked_image(img_path, cv_org_img_pt, dict_masks_etc, output_path_debug)
             logging.debug(f'dict_bboxes: {dict_bboxes}')
 
             list_removal_tokens = ['<|startoftext|>', '<|im_end|>', '[!@#$NEXT!@#$]']
 
-            final_query = []
-            final_description = []
+            if prompt_id == 4510:
+                final_query = []
+                final_description = []
 
-            # description with VLM
-            for ppt_target in ['D', 'L', 'R', 'P', 'Desc']:
-                if ppt_target in ['Desc']:
-                    ppt_id_list_img_path = list_img_path
-                    ppt_bboxes = bboxes
-                else:
-                    file_with_ext = os.path.split(img_path)[1]
-                    filename, ext = os.path.splitext(file_with_ext)
-
-                    if ppt_target == 'D':
-                        ppt_id_list_img_path = [os.path.join(output_path_debug, f'{filename}_P{ext}')]
+                for ppt_c, ppt_id in zip(['D', 'L', 'R', 'P', ''], [45101, 45102, 45103, 45104, 45105]):
+                # for ppt_c, ppt_id in zip(['D'], [45101]):
+                    if ppt_id == 45105:
+                        if use_llm_decision or use_gpt_decision:
+                            ppt_id = 45106  # do not ask final decision to vlm, just require image description.
+                            prefix_prompt = None
+                        else:
+                            prefix_prompt = [' '.join(final_description)]
+                        ppt_id_list_img_path = list_img_path
+                        ppt_bboxes = bboxes
                     else:
-                        ppt_id_list_img_path = [os.path.join(output_path_debug, f'{filename}_{ppt_target}{ext}')]
+                        prefix_prompt = None
 
-                    ppt_bboxes = dict_bboxes[ppt_target]
+                        file_with_ext = os.path.split(img_path)[1]
+                        filename, ext = os.path.splitext(file_with_ext)
+                        ppt_id_list_img_path = [os.path.join(output_path_debug, f'{filename}_{ppt_c}{ext}')]
+                        ppt_bboxes = dict_bboxes[ppt_c]
+                        
+                    ppt_query, ppt_desc = lvm.describe_whole_images_with_boxes(ppt_id_list_img_path, ppt_bboxes, goal_label_cxcy, 
+                                                                                step_by_step=True, 
+                                                                                list_example_prompt=list_example_prompt,
+                                                                                prompt_id=ppt_id, prefix_prompt=prefix_prompt)
                     
-                ppt_query, ppt_desc = lvm.describe_whole_images_with_boxes(ppt_id_list_img_path, ppt_bboxes, goal_label_cxcy, 
-                                                                            step_by_step=True, 
-                                                                            list_example_prompt=list_example_prompt,
-                                                                            prompt_id=ppt_target, 
-                                                                            prefix_prompt=None)
-                for rem in list_removal_tokens:
-                    ppt_query = ppt_query.replace(rem, '')
-                    ppt_desc = ppt_desc.replace(rem, '')
+                    for rem in list_removal_tokens:
+                        ppt_query = ppt_query.replace(rem, '')
+                        ppt_desc = ppt_desc.replace(rem, '')
 
-                final_query.append(ppt_query)
-                final_description.append(ppt_desc)
+                    final_query.append(ppt_query)
+                    final_description.append(ppt_desc)
 
-                logging.info(f'filename: {ppt_id_list_img_path}')
-                logging.info(f'query: {ppt_query}')
-                logging.info(f'desc: {ppt_desc}')
-                logging.info(f'bboxes: {ppt_bboxes}')
+                    logging.info(f'filename: {ppt_id_list_img_path}')
+                    logging.info(f'query: {ppt_query}')
+                    logging.info(f'desc: {ppt_desc}')
+                    logging.info(f'bboxes: {ppt_bboxes}')
 
-            
 
-            # decision with LLM or GPT
-            ppt_target = 'Decs'
+                    if ppt_id == 45106 and (use_llm_decision or use_gpt_decision):
+                        # LLM for final decision, go or wait.
+                        list_prompt, list_system = get_prompt(goal_label_cxcy, ppt_bboxes, trial_num=45107, sep_system=True)
+                        llm_system = list_system[0]
 
-            if use_llm_decision or use_gpt_decision:
-                # LLM for final decision, go or wait.
-                list_prompt, list_system = prompt_lib.get_prompt(goal_label_cxcy, ppt_bboxes, trial_num=ppt_target, sep_system=True)
-                llm_system = list_system[0]
+                        prefix_prompt = [' '.join(final_description)]
 
-                prefix_prompt = [' '.join(final_description)]
+                        llm_prompt = f'The image description is following: {prefix_prompt[0]} {list_prompt[0]} Say only the answers. '
 
-                llm_prompt = f'The image description is following: {prefix_prompt[0]} {list_prompt[0]} Say only the answers. '
+                        if use_llm_decision:
+                            response = llm_model.generate_llm_response(llm_system, llm_prompt)
+                        elif use_gpt_decision:
+                            response = gpt_model.generate_llm_response(llm_system, llm_prompt)
+                        else:
+                            raise AssertionError('No llm model!')
+                        
+                        # for rem in list_removal_tokens:
+                        #     llm_prompt = llm_prompt.replace(rem, '')
+                        #     response = response.replace(rem, '')
 
-                if use_llm_decision:
-                    response = llm_model.generate_llm_response(llm_system, llm_prompt)
-                elif use_gpt_decision:
-                    response = gpt_model.generate_llm_response(llm_system, llm_prompt)
-                else:
-                    raise AssertionError('No llm model!')
+                        final_query.append(llm_prompt)
+                        final_description.append(response)
 
-                final_query.append(llm_prompt)
-                final_description.append(response)
+                        logging.info(f'filename: LLM')
+                        logging.info(f'query: {llm_prompt}')
+                        logging.info(f'desc: {response}')
+                        logging.info(f'bboxes: {ppt_bboxes}')
 
-                logging.info(f'filename: LLM')
-                logging.info(f'query: {llm_prompt}')
-                logging.info(f'desc: {response}')
-                logging.info(f'bboxes: {ppt_bboxes}')
+                        # LLM for summary
+                        llm_prompt_system = 'A chat between a human and an AI that understands visuals in English. '
+                        llm_prompt_summary_cmd = 'Summarize the following sentences into one sentence. '\
+                                                 'The summarized sentence should include what is at the destination, on the left, on the right, and on the path, the recommended action, and its reason. '\
+                                                 'Answer with the summarized content only. '
+                        llm_prompt_summary = f'{llm_prompt_summary_cmd} This is sentences: {final_description[0]} {final_description[1]} {final_description[2]} {final_description[3]} {final_description[5]}'
+
+                        if use_llm_summary:
+                            response_summary = llm_model.generate_llm_response(llm_prompt_system, llm_prompt_summary)
+                        elif use_gpt_summary:
+                            response_summary = gpt_model.generate_llm_response(llm_prompt_system, llm_prompt_summary)
+                        else:
+                            raise AssertionError('No llm model for summary')
+                        
+
+                        final_query.append(llm_prompt_summary)
+                        final_description.append(response_summary)
+
+                        logging.info(f'filename: LLM Summary')
+                        logging.info(f'query: {llm_prompt_summary}')
+                        logging.info(f'desc: {response_summary}')
             else:
-                raise AssertionError('use_llm_decision or use_gpt_decsion must be True')
-
-
-            if use_llm_summary or use_gpt_summary:
-                # LLM for summary
-                llm_prompt_system = 'A chat between a human and an AI that understands visuals in English. '
-                llm_prompt_summary_cmd = 'Summarize the following sentences into one sentence. '\
-                                            'The summarized sentence should include what is at the destination, on the left, on the right, and on the path, the recommended action, and its reason. '\
-                                            'Answer with the summarized content only. '
-                llm_prompt_summary = f'{llm_prompt_summary_cmd} This is sentences: {final_description[0]} {final_description[1]} {final_description[2]} {final_description[3]} {final_description[5]}'
-
-                if use_llm_summary:
-                    response_summary = llm_model.generate_llm_response(llm_prompt_system, llm_prompt_summary)
-                elif use_gpt_summary:
-                    response_summary = gpt_model.generate_llm_response(llm_prompt_system, llm_prompt_summary)
-                else:
-                    raise AssertionError('No llm model for summary')
+                final_query, final_description = lvm.describe_whole_images_with_boxes(list_img_path, bboxes, goal_label_cxcy, 
+                                                                                        step_by_step=True, 
+                                                                                        list_example_prompt=list_example_prompt,
+                                                                                        prompt_id=args.prompt_id)
                 
+            # final_query.extend(['', '', '', '', '', '', ''])
+            # final_description.extend(['', '', '', '', '', '', ''])
 
-                final_query.append(llm_prompt_summary)
-                final_description.append(response_summary)
-
-                logging.info(f'filename: LLM Summary')
-                logging.info(f'query: {llm_prompt_summary}')
-                logging.info(f'desc: {response_summary}')
-            else:
-                raise AssertionError('use_llm_summary or use_gpt_summary must be True')
-            
             output_dict = {
                 'filename': img_file,
                 'annotator': 'pipeline',

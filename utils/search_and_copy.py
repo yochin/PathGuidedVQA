@@ -35,15 +35,15 @@ def copy_file(source_folder, destination_folder, file_name, do_copy=True, then_r
 
 
 if __name__ == '__main__':   
-    ref_file_folder = '/media/NAS_GDHRI/dbs/PathGuidedVQA/2024.08.06/DestMasking_DrawDepthPoint_FewExample_DecGPT_SumLLama38binst_DBval20k_Try2/qa'
+    ref_file_folder = '/home/yochin/Desktop/PathGuidedVQA_Base/output/2024.08.19/DestMasking_DrawDepthPoint_FewExample_DecGPT_SumLLama38binst_DBval20k_NoDest_YesPath/qa'
     ref_file_ext = ('.xml')
 
     source_file_folder = '/home/yochin/Desktop/PathGuidedVQA_Base/val20k/original_images'     
-    destination_file_folder = '/media/NAS_GDHRI/dbs/PathGuidedVQA/2024.08.06/DestMasking_DrawDepthPoint_FewExample_DecGPT_SumLLama38binst_DBval20k_Try2/original_images'
+    destination_file_folder = '/home/yochin/Desktop/PathGuidedVQA_Base/output/2024.08.19/DestMasking_DrawDepthPoint_FewExample_DecGPT_SumLLama38binst_DBval20k_NoDest_YesPath/original_images'
     copied_file_ext = ('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.JPG', '.PNG', '.JPEG')
 
     do_copy = True     # if False, just show the copy info.
-    then_remove = False
+    then_remove = True
 
     # ref 폴더에서 파일 목록 가져오기
     list_img_files = [f for f in os.listdir(ref_file_folder) if os.path.isfile(os.path.join(ref_file_folder, f))]
