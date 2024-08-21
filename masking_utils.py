@@ -323,8 +323,6 @@ def mask_depth_image_path_radius(depth_image, path_points, camera_intrinsics, ph
 
 def get_intrinsic_ratio(filename):
     # default
-    fx_r = 0.6
-    fy_r = 0.6
     cx_r = 0.5
     cy_r = 0.5
 
@@ -352,7 +350,9 @@ def get_intrinsic_ratio(filename):
         fx_r = 0.4830019884684673 * correction_factor   # 2689.3550717924259 / 5568
         fy_r = 0.5517242397258202 * correction_factor   # 2688.0004959441958 / 4872
     else:
-        raise AssertionError('Cannot get camera intrinsic from unsupported filename.')
+        # raise AssertionError('Cannot get camera intrinsic from unsupported filename.')
+        fx_r = 0.6 * 3
+        fy_r = 0.6 * 3
         # fx_r = 0.6
         # fy_r = 0.95
 

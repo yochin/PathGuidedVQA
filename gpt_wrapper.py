@@ -1,6 +1,7 @@
 import openai
 import base64
 import logging
+import time
 
 def encode_image_to_base64(image_path):
     with open(image_path, "rb") as image_file:
@@ -8,13 +9,15 @@ def encode_image_to_base64(image_path):
 
 
 class gpt_wrapper():
-    def __init__(self, llm_model_name="gpt-4o-mini-2024-07-18"):
+    def __init__(self, llm_model_name="gpt-4o-mini-2024-07-18", api_key=None):
         # OpenAI API 키 설정 (환경 변수에서 가져옴)
-        openai.api_key = "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"
+        openai.api_key = api_key
         self.openai_model = llm_model_name #"gpt-4-vision-preview"
 
+        self.max_retry = 5
+        self.retry_delay = 2
 
-    def generate_llm_response(self, sys_prompt, user_prompt, image_path=None, max_tokens=1024):
+    def generate_llm_response(self, sys_prompt, user_prompt, image_path=None, max_tokens=1024, seed=17, temperature=1.0):
         if image_path is not None:
             # 이미지를 base64로 인코딩
             encoded_image = encode_image_to_base64(image_path)
@@ -52,23 +55,34 @@ class gpt_wrapper():
             }
         )
 
-        completion = openai.chat.completions.create(
-            model=self.openai_model,
-            messages=messages,
-            max_tokens=max_tokens,
-        )
-        answer = completion.choices[0].message.content
+        for attempt in range(self.max_retry):
+            try:
+                completion = openai.chat.completions.create(
+                    model=self.openai_model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    seed=seed,
+                    temperature=temperature
+                )
+                response = completion.choices[0].message.content
 
-        # print("\n", {"prompt": prompt, "outputs": outputs}, "\n")
-        
-        response = answer
+                logging.info(f'#### From GPT ####\n')
+                logging.info(f'system_prompt: {sys_prompt}')
+                logging.info(f'user_prompt: {user_prompt}')
+                logging.info(f'response: {response}')
 
-        logging.info(f'#### From GPT ####\n')
-        logging.info(f'system_prompt: {sys_prompt}')
-        logging.info(f'user_prompt: {user_prompt}')
-        logging.info(f'response: {response}')
+                return response
+            except openai.error.OpenAIError as e:
+                logging.info(f"OpenAI API call error: {e}")
 
-        return response
+                if attempt < self.max_retry - 1:
+                    logging.info(f"{self.retry_delay}second after {attempt+1}-th try again.")
+                    time.sleep(self.retry_delay)
+                else:
+                    print(f"OpenAI API call all failed, skip this request.")
+
+                    return None
+                
 
 if __name__ == '__main__':
     llm_model_name = "gpt-4o-mini-2024-07-18"

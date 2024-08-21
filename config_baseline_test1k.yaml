@@ -1,4 +1,4 @@
-task_name: Masking_AddYOLO_FewExample_DescLLaVA_DecsGPT_SumLLama38binst_val20k
+task_name: Baseline_AddYOLO_FewExample_DescLLaVA_DecsGPT_SumLLama38binst_Test1k
 
 vlm:
     model_name: llava16_cli     # [llava16_cli | chatgpt]
@@ -18,7 +18,7 @@ gpt:
     temperature: 0.2
     api_key: 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
 
-prompt_lib_name: PathLRPathDescDeci
+prompt_lib_name: Baseline
 
 yolo:
     dynamic_det_path: yolo/WEIGHTS/aihub_pwalk/train852/weights/best.pt
@@ -36,15 +36,15 @@ image_server:
     ref_path: /home/yochin/Desktop/PathGuidedVQA_Base/output/(2024.08.05)DestMasking_DrawPoint_NoExample_DecGPT_SumLLama38binst_DBvalMore4k/original_images
 
 db:
-    base_dir: ../val20k
+    base_dir: ../test1k
     images: original_images
     depths: depth_anything_v2
     det_anno_pred: det_anno_pred
     det_anno_gt: det_anno_gt
     paths: paths
-    gp_info: anno
+    gp_info: gp_info_xml
 
-use_org_image: False
+use_org_image: True
 
 dest:
     masking_depth: False
@@ -59,7 +59,7 @@ dest:
 output_dir: /home/yochin/Desktop/PathGuidedVQA_Base/output/2024.08.20
 
 gp:
-    method: set_front    # [load_anno | select_det | set_front], if all methods are failed, set_front is the last.
+    method: load_xml    # [load_xml | load_anno | select_det | set_front], if all methods are failed, set_front is the last.
     # This is temporary for testing algorithm
     method_set_front_type: ten_meters_from_below_point   # [manual | three_quarters | ten_meters_from_below_point | ten_meters_from_depth]
     max_search_degree: 45   # >= 0, int

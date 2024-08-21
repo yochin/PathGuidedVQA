@@ -18,7 +18,7 @@ class depth_anything():
         # max_depth = 80 # 20 for indoor model, 80 for outdoor model
 
         self.model = DepthAnythingV2(**{**model_configs[encoder], 'max_depth': max_depth})
-        self.model.load_state_dict(torch.load(f'Depth_Anything_V2/checkpoints/depth_anything_v2_metric_{dataset}_{encoder}.pth', map_location='cpu'))
+        self.model.load_state_dict(torch.load(f'depth_anything_v2/checkpoints/depth_anything_v2_metric_{dataset}_{encoder}.pth', map_location='cpu'))
         self.model.to(DEVICE).eval()
 
         

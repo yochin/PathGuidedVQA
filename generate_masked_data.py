@@ -28,6 +28,8 @@ import numpy as np
 from masking_utils import generate_mask, get_intrinsic_ratio, create_circle_mask, create_depth_mask
 from masking_utils import mask_dest_depth_lr, mask_depth_image_using_path, save_debug_masked_image, is_within_mask
 import json
+import xml.etree.ElementTree as ET
+
 
 
 def parse_args():
@@ -289,6 +291,16 @@ def get_normalized_click(image):
         raise ValueError("No click detected")
 
 
+def read_gp_from_xml(xml_file):
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    x_value = float(root.find('goal_position/x').text)
+    y_value = float(root.find('goal_position/y').text)
+
+    return x_value, y_value
+
+
 # Assisted by ChatGPT 4
 def main():
     # read config file path
@@ -340,13 +352,15 @@ def main():
     apply_cam_intrinsic = conf['apply_cam_intrinsic']
 
     llm_model_name = conf['llm']['model_name']
-    gpt_model_name = conf['gpt']['model_name']
-
     use_llm_decision = conf['llm']['use_decision']
     use_llm_summary = conf['llm']['use_summary']
 
+    gpt_model_name = conf['gpt']['model_name']
     use_gpt_decision = conf['gpt']['use_decision']
     use_gpt_summary = conf['gpt']['use_summary']
+    gpt_seed = conf['gpt']['seed']
+    gpt_temperature = conf['gpt']['temperature']
+    gpt_api_key = conf['gpt']['api_key']
 
     np_rnd_seed = conf['gp']['np_rnd_seed']
 
@@ -357,6 +371,9 @@ def main():
     dst_masking_circle = conf['dest']['masking_circle']
     dst_draw_bbox = conf['dest']['draw_bbox']
     dst_circle_ratio = conf['dest']['circle_ratio_w']
+    dst_use_path_mask = conf['dest']['use_path_mask']
+
+    use_org_image = conf['use_org_image']
 
     import importlib
 
@@ -365,7 +382,7 @@ def main():
 
     prompt_lib = importlib.import_module(prompt_lib_name)
     
-    if gp_method == 'load_anno':
+    if gp_method in ['load_anno', 'load_xml']:
         assert os.path.exists(anno_path_gp)
 
     if gp_method == 'select_det':
@@ -407,7 +424,7 @@ def main():
         llm_model = llm_wrapper(llm_model_name)
 
     if use_gpt_decision or use_gpt_summary:
-        gpt_model = gpt_wrapper(gpt_model_name)
+        gpt_model = gpt_wrapper(gpt_model_name, gpt_api_key)
 
     # 폴더 내의 모든 파일 목록을 가져옴
     files = os.listdir(image_path)
@@ -424,6 +441,13 @@ def main():
         img_file_wo_ext = os.path.splitext(img_file)[0]
         logging.info('==============================')
         logging.info(f'@main - processing {img_path}...')
+
+        output_filename_qa = os.path.join(output_path_qa, img_file_wo_ext + '.xml')
+
+        if os.path.exists(output_filename_qa):
+            logging.info(f'This file will be skipped. {output_filename_qa}.')
+            
+            continue
 
         # XML 파일의 전체 경로 (파일 이름은 같지만 확장자만 xml로 변경)
         xml_path1 = os.path.join(anno_path1, img_file_wo_ext + '.xml')
@@ -502,6 +526,15 @@ def main():
                 cx, cy = lines[0].split(' ')
                 cx = float(cx) / whole_width
                 cy = float(cy) / whole_height
+                list_labels_gps = [['point', [cx, cy]]]
+                logging.info(f'Set GP {list_labels_gps[0][0]}, {list_labels_gps[0][1]} from anno file, {path_to_gp}')
+            else:
+                logging.info(f'No GPs due to No anno file, {path_to_gp}')
+        
+        elif gp_method == 'load_xml':
+            path_to_gp = os.path.join(anno_path_gp, img_file_wo_ext + '.xml')
+            if os.path.exists(path_to_gp):
+                cx, cy = read_gp_from_xml(path_to_gp)
                 list_labels_gps = [['point', [cx, cy]]]
                 logging.info(f'Set GP {list_labels_gps[0][0]}, {list_labels_gps[0][1]} from anno file, {path_to_gp}')
             else:
@@ -630,98 +663,103 @@ def main():
                 np.clip(int(y*whole_height), 0, whole_height-1)
                 ] for x, y in path_array]
             
-            # generate masks with left all and right all masks
-            dict_masks = generate_mask(cv_org_img_pt, path_array_xy)    # ['L', 'R'], all left and right area along with path.
-
-            # generate mask using depth image on the path with physical radius
-            if apply_cam_intrinsic:
-                fx_r, fy_r, cx_r, cy_r = get_intrinsic_ratio(img_file_wo_ext)
-                camera_intrinsics = (whole_width*fx_r, whole_height*fy_r, whole_width*cx_r, whole_height*cy_r)  # fx, fy, cx, cy
+            if use_org_image:
+                save_debug_masked_image(img_path, cv_org_img, {'D': None, 'P': None, 'L': None, 'R': None}, output_path_debug)
+                dict_bboxes = {'D': bboxes, 'P': bboxes, 'L': bboxes, 'R': bboxes}
             else:
-                camera_intrinsics = (whole_width*0.6, whole_height*0.6, whole_width/2, whole_height/2)  # fx, fy, cx, cy
+                # generate masks with left all and right all masks
+                dict_masks = generate_mask(cv_org_img_pt, path_array_xy)    # ['L', 'R'], all left and right area along with path.
 
-            # generate mask of destination (not masked rgb image)
-            # dict_masks['D'] = create_trapezoid_mask(cv_org_img_pt, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)+50], r=50)
-            depth_mask_c10 = create_circle_mask(cv_org_img_pt, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)], r=int(whole_width*dst_circle_ratio/2.0))
-
-            # generate mask using depth image (remove far objects over the destination point)
-            depth_mask = create_depth_mask(depth_image, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)], 
-                                           radius=25, buffer_dist=5.)
-
-            if dst_masking_depth:
-                depth_mask_behind = create_depth_mask(depth_image, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)], 
-                                           radius=25, buffer_dist=dst_depth_meter)
-                depth_mask_front = create_depth_mask(depth_image, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)], 
-                                           radius=25, buffer_dist=-dst_depth_meter)
-                depth_mask_region = cv2.bitwise_and(depth_mask_behind, depth_mask_front)
-
-                depth_mask_lr, depth_mask_c = mask_dest_depth_lr(depth_image, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)], camera_intrinsics, physical_half_width=1.0)
-                dict_masks['D'] = cv2.bitwise_and(depth_mask_lr, depth_mask_region)
-                dict_masks['D'] = cv2.bitwise_or(dict_masks['D'], depth_mask_c10)
-      
-                # for debugging
-                dict_masks_debug2 = {
-                    'Dest_behind': depth_mask_behind,
-                    'Dest_front': depth_mask_front,
-                    'Dest_region': depth_mask_region,
-                    'Dest_LR': depth_mask_lr,
-                    'Dest_C': depth_mask_c,
-                    'Dest_C10': depth_mask_c10,
-                }
-                save_debug_masked_image(img_path, cv_org_img, dict_masks_debug2, output_path_debug)
-
-            
-            # depth_mask_near_path = mask_depth_image_path_radius(depth_image, path_array_xy, camera_intrinsics, physical_radius=2.0)
-            depth_mask_near_path = mask_depth_image_using_path(depth_image, path_array_xy, camera_intrinsics, physical_half_width=1.0)
-
-            dict_masks['P'] = depth_mask_near_path
-
-            # depth_mask_near_path_1m = mask_depth_image_using_path(depth_image, path_array_xy, camera_intrinsics, physical_half_width=2)
-            # depth_mask_near_path_4m = mask_depth_image_using_path(depth_image, path_array_xy, camera_intrinsics, physical_half_width=4)
-
-            # for debugging
-            dict_masks_debug = {
-                'L1': dict_masks['L'],
-                'R1': dict_masks['R'],
-                'Dst1': dict_masks['D'],
-                'Depth_limit': depth_mask,
-                'Path_half2m': depth_mask_near_path,
-                # 'Path_half1m': depth_mask_near_path_1m,
-                # 'Path_half4m': depth_mask_near_path_4m
-            }
-            save_debug_masked_image(img_path, cv_org_img_pt, dict_masks_debug, output_path_debug)
-
-            dict_bboxes = {}
-            for key, value in dict_masks.items():
-                # for L, R, Dest
-                dict_masks[key] = cv2.bitwise_and(dict_masks[key], depth_mask)  # remove too far region
-
-                if key not in ['D', 'P']:    # 'L', 'R', 'P'
-                    # dict_masks[key] = cv2.bitwise_and(dict_masks[key], depth_mask_near_path_4m)
-                    dict_masks[key] = cv2.bitwise_and(dict_masks[key], ~dict_masks['P'])
-
-                dict_bboxes[key] = []
-
-                for item in bboxes:
-                    if is_within_mask(dict_masks[key], item):
-                        dict_bboxes[key].append(item)
-
-
-            # dict_masks includes 'L', 'R', 'D', 'P'
-            # save_debug_masked_image(img_path, cv_org_img_pt, dict_masks, output_path_debug)
-            save_debug_masked_image(img_path, cv_org_img, dict_masks, output_path_debug)
-
-            if dst_draw_circle:
-                save_debug_masked_image(img_path, cv_org_img_circle, {'D': None}, output_path_debug)
-
-            if dst_draw_point:
-                if not dst_masking_depth:
-                    save_debug_masked_image(img_path, cv_org_img_pt, {'D': None}, output_path_debug)
+                # generate mask using depth image on the path with physical radius
+                if apply_cam_intrinsic:
+                    fx_r, fy_r, cx_r, cy_r = get_intrinsic_ratio(img_file_wo_ext)
+                    camera_intrinsics = (whole_width*fx_r, whole_height*fy_r, whole_width*cx_r, whole_height*cy_r)  # fx, fy, cx, cy
                 else:
-                    save_debug_masked_image(img_path, cv_org_img_pt, {'D': dict_masks['D']}, output_path_debug)
+                    camera_intrinsics = (whole_width*0.6, whole_height*0.6, whole_width/2, whole_height/2)  # fx, fy, cx, cy
 
-            if dst_draw_circle is False and dst_draw_point is False and dst_masking_circle is False and dst_masking_depth is False:
-                save_debug_masked_image(img_path, cv_org_img, {'D': None}, output_path_debug)
+                # generate mask using depth image (remove far objects over the destination point)
+                depth_mask = create_depth_mask(depth_image, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)], 
+                                            radius=25, buffer_dist=5.)
+
+                if dst_masking_depth:
+                    # generate mask of destination (not masked rgb image)
+                    # dict_masks['D'] = create_trapezoid_mask(cv_org_img_pt, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)+50], r=50)
+                    depth_mask_c10 = create_circle_mask(cv_org_img_pt, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)], r=int(whole_width*dst_circle_ratio/2.0))
+
+                    depth_mask_behind = create_depth_mask(depth_image, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)], 
+                                            radius=25, buffer_dist=dst_depth_meter)
+                    depth_mask_front = create_depth_mask(depth_image, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)], 
+                                            radius=25, buffer_dist=-dst_depth_meter)
+                    depth_mask_region = cv2.bitwise_and(depth_mask_behind, depth_mask_front)
+
+                    depth_mask_lr, depth_mask_c = mask_dest_depth_lr(depth_image, [int(goal_cxcy[0]*whole_width), int(goal_cxcy[1]*whole_height)], camera_intrinsics, physical_half_width=1.0)
+                    dict_masks['D'] = cv2.bitwise_and(depth_mask_lr, depth_mask_region)
+                    dict_masks['D'] = cv2.bitwise_or(dict_masks['D'], depth_mask_c10)
+        
+                    # for debugging
+                    dict_masks_debug2 = {
+                        'Dest_behind': depth_mask_behind,
+                        'Dest_front': depth_mask_front,
+                        'Dest_region': depth_mask_region,
+                        'Dest_LR': depth_mask_lr,
+                        'Dest_C': depth_mask_c,
+                        'Dest_C10': depth_mask_c10,
+                        'Dst1': dict_masks['D'],
+                    }
+                    save_debug_masked_image(img_path, cv_org_img, dict_masks_debug2, output_path_debug)
+
+                
+                # depth_mask_near_path = mask_depth_image_path_radius(depth_image, path_array_xy, camera_intrinsics, physical_radius=2.0)
+                depth_mask_near_path = mask_depth_image_using_path(depth_image, path_array_xy, camera_intrinsics, physical_half_width=1.0)
+
+                dict_masks['P'] = depth_mask_near_path
+
+                # depth_mask_near_path_1m = mask_depth_image_using_path(depth_image, path_array_xy, camera_intrinsics, physical_half_width=2)
+                # depth_mask_near_path_4m = mask_depth_image_using_path(depth_image, path_array_xy, camera_intrinsics, physical_half_width=4)
+
+                # for debugging
+                dict_masks_debug = {
+                    'L1': dict_masks['L'],
+                    'R1': dict_masks['R'],
+                    'Depth_limit': depth_mask,
+                    'Path_half2m': depth_mask_near_path,
+                    # 'Path_half1m': depth_mask_near_path_1m,
+                    # 'Path_half4m': depth_mask_near_path_4m
+                }
+                save_debug_masked_image(img_path, cv_org_img_pt, dict_masks_debug, output_path_debug)
+
+                dict_bboxes = {}
+                for key, value in dict_masks.items():
+                    # for L, R, Dest
+                    dict_masks[key] = cv2.bitwise_and(dict_masks[key], depth_mask)  # remove too far region
+
+                    if key not in ['D', 'P']:    # 'L', 'R', 'P'
+                        # dict_masks[key] = cv2.bitwise_and(dict_masks[key], depth_mask_near_path_4m)
+                        dict_masks[key] = cv2.bitwise_and(dict_masks[key], ~dict_masks['P'])
+
+                    dict_bboxes[key] = []
+
+                    for item in bboxes:
+                        if is_within_mask(dict_masks[key], item):
+                            dict_bboxes[key].append(item)
+
+
+                # dict_masks includes 'L', 'R', 'D', 'P'
+                # save_debug_masked_image(img_path, cv_org_img_pt, dict_masks, output_path_debug)
+                save_debug_masked_image(img_path, cv_org_img, dict_masks, output_path_debug)
+
+                if dst_draw_circle:
+                    save_debug_masked_image(img_path, cv_org_img_circle, {'D': None}, output_path_debug)
+
+                if dst_draw_point:
+                    if not dst_masking_depth:
+                        save_debug_masked_image(img_path, cv_org_img_pt, {'D': None}, output_path_debug)
+                    else:
+                        save_debug_masked_image(img_path, cv_org_img_pt, {'D': dict_masks['D']}, output_path_debug)
+
+                if dst_use_path_mask is False:
+                    if dst_draw_circle is False and dst_draw_point is False and dst_masking_circle is False and dst_masking_depth is False:
+                        save_debug_masked_image(img_path, cv_org_img, {'D': None}, output_path_debug)
 
             logging.debug(f'dict_bboxes: {dict_bboxes}')
 
@@ -739,12 +777,13 @@ def main():
                     file_with_ext = os.path.split(img_path)[1]
                     filename, ext = os.path.splitext(file_with_ext)
 
-                    if ppt_target == 'D':
-                        ppt_id_list_img_path = [os.path.join(output_path_debug, f'{filename}_P{ext}')]
+                    if ppt_target == 'D' and dst_use_path_mask:
+                        temp_ppt_target = 'P'
+                        ppt_id_list_img_path = [os.path.join(output_path_debug, f'{filename}_{temp_ppt_target}{ext}')]
+                        ppt_bboxes = dict_bboxes[temp_ppt_target]
                     else:
                         ppt_id_list_img_path = [os.path.join(output_path_debug, f'{filename}_{ppt_target}{ext}')]
-
-                    ppt_bboxes = dict_bboxes[ppt_target]
+                        ppt_bboxes = dict_bboxes[ppt_target]
                     
                 ppt_query, ppt_desc = lvm.describe_whole_images_with_boxes(ppt_id_list_img_path, ppt_bboxes, goal_label_cxcy, 
                                                                             step_by_step=True, 
@@ -780,7 +819,7 @@ def main():
                 if use_llm_decision:
                     response = llm_model.generate_llm_response(llm_system, llm_prompt)
                 elif use_gpt_decision:
-                    response = gpt_model.generate_llm_response(llm_system, llm_prompt)
+                    response = gpt_model.generate_llm_response(llm_system, llm_prompt, seed=gpt_seed, temperature=gpt_temperature)
                 else:
                     raise AssertionError('No llm model!')
 
@@ -806,7 +845,7 @@ def main():
                 if use_llm_summary:
                     response_summary = llm_model.generate_llm_response(llm_prompt_system, llm_prompt_summary)
                 elif use_gpt_summary:
-                    response_summary = gpt_model.generate_llm_response(llm_prompt_system, llm_prompt_summary)
+                    response_summary = gpt_model.generate_llm_response(llm_prompt_system, llm_prompt_summary, seed=gpt_seed, temperature=gpt_temperature)
                 else:
                     raise AssertionError('No llm model for summary')
                 
@@ -819,46 +858,49 @@ def main():
                 logging.info(f'desc: {response_summary}')
             else:
                 raise AssertionError('use_llm_summary or use_gpt_summary must be True')
-            
-            output_dict = {
-                'filename': img_file,
-                'annotator': 'pipeline',
-                'size_whc': [whole_width, whole_height, 3],
-                'goal_position_xy': goal_cxcy,
-                'goal_object_label': goal_label,
-                # 'final_query': final_query,
-                # 'answer': final_description
 
-                'dest_query': final_query[0],
-                'dest_desc': final_description[0],
-                'left_query': final_query[1],
-                'left_desc': final_description[1],
-                'right_query': final_query[2],
-                'right_desc': final_description[2],
-                # 'front_desc': ,
-                'path_query': final_query[3],
-                'path_desc': final_description[3]
-            }
+            # check None response
+            if None not in final_description:
+                output_dict = {
+                    'filename': img_file,
+                    'annotator': 'pipeline',
+                    'size_whc': [whole_width, whole_height, 3],
+                    'goal_position_xy': goal_cxcy,
+                    'goal_object_label': goal_label,
+                    # 'final_query': final_query,
+                    # 'answer': final_description
 
-            if use_llm_decision or use_gpt_decision:
-                output_dict['query_before_llm'] = final_query[4]
-                output_dict['desc_before_llm'] = final_description[4]
+                    'dest_query': final_query[0],
+                    'dest_desc': final_description[0],
+                    'left_query': final_query[1],
+                    'left_desc': final_description[1],
+                    'right_query': final_query[2],
+                    'right_desc': final_description[2],
+                    # 'front_desc': ,
+                    'path_query': final_query[3],
+                    'path_desc': final_description[3]
+                }
 
-                output_dict['recommend_query'] = final_query[5]
-                output_dict['recommend'] = final_description[5].replace('\n', ' ')
+                if use_llm_decision or use_gpt_decision:
+                    output_dict['query_before_llm'] = final_query[4]
+                    output_dict['desc_before_llm'] = final_description[4]
 
-                output_dict['summary_query'] = final_query[6]
-                output_dict['summary_answer'] = final_description[6]
-            else:
-                output_dict['recommend_query'] = final_query[4]
-                output_dict['recommend'] = final_description[4].replace('\n', ' ')
+                    output_dict['recommend_query'] = final_query[5]
+                    output_dict['recommend'] = final_description[5].replace('\n', ' ')
 
-            output_dict['bboxes'] = bboxes
-            output_dict['path_array'] = path_array
+                    output_dict['summary_query'] = final_query[6]
+                    output_dict['summary_answer'] = final_description[6]
+                else:
+                    output_dict['recommend_query'] = final_query[4]
+                    output_dict['recommend'] = final_description[4].replace('\n', ' ')
 
-            xml_all_info = dict_to_xml(output_dict, 'Annotation')
-            save_xml(xml_all_info, os.path.join(output_path_qa, img_file_wo_ext + '.xml'))
-            # save_json(output_dict, os.path.join(output_path_qa, img_file_wo_ext + '.json'))
+                output_dict['bboxes'] = bboxes
+                output_dict['path_array'] = path_array
+
+                xml_all_info = dict_to_xml(output_dict, 'Annotation')
+                save_xml(xml_all_info, output_filename_qa)
+                # save_json(output_dict, os.path.join(output_path_qa, img_file_wo_ext + '.json'))
+
 
             # 4.3. draw all whole original image
             # draw start, mid, and goal points and boxes

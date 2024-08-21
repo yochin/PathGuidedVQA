@@ -67,8 +67,8 @@ def get_prompt(goal_label_cxcy, bboxes, trial_num, sep_system=False, add_LCR_pro
         # Summarize prompt
         list_prompt1 = []
         if trial_num == list_ids_sep[0]:
-            # Destination
-            list_prompt1.append(f'Assume the visible area in the image is the user\'s path and the user moves forward along the visible area of the image. '    # only circle, same style of left and right
+            # Destination, 
+            list_prompt1.append(f'Assume the user\'s destination is the {dest_descriptions} in the image. '    # only circle, same style of left and right
                                 'Provide a one-sentence description of the destination where the user\'s path is heading. '
 
                                 # Few Example
@@ -79,26 +79,26 @@ def get_prompt(goal_label_cxcy, bboxes, trial_num, sep_system=False, add_LCR_pro
                                 )       # DESC1
         if trial_num == list_ids_sep[1]:
             # Left
-            list_prompt1.append(f'Assume the visible area in the image is to the left of the user\'s path. '
-                                # 'Analyze the input image and provide a one-sentence description that includes what is located closely to the left of the path. '
-                                'Analyze the visible area and provide a one-sentence description that includes what is located closely to the left of the path. '
+            list_prompt1.append(f'Assume the user is moving along a 2-meter-wide path from the starting point [0.5, 1.0] to the destination {dest_descriptions} in the image. '
+                                'Analyze the input image and provide a one-sentence description that includes what is located closely to the left of the path. '
+                                # 'Analyze the visible area and provide a one-sentence description that includes what is located closely to the left of the path. '
                                 'If there are no special objects other than the floor, say \'nothing\'. '  # PathR
                                 'Example 1) There are cars on the left side. '
                                 'Example 2) There are nothing than the floor on the left side. '  # PathR
                                 )  # DESC1 or 2
         if trial_num == list_ids_sep[2]:
             # Right
-            list_prompt1.append(f'Assume the visible area in the image is to the right of the user\'s path. '
-                                # 'Analyze the input image and provide a one-sentence description that includes what is located closely to the right of the path. '
-                                'Analyze the visible area and provide a one-sentence description that includes what is located closely to the right of the path. '
+            list_prompt1.append(f'Assume the user is moving along a 2-meter-wide path from the starting point [0.5, 1.0] to the destination {dest_descriptions} in the image. '
+                                'Analyze the input image and provide a one-sentence description that includes what is located closely to the right of the path. '
+                                # 'Analyze the visible area and provide a one-sentence description that includes what is located closely to the right of the path. '
                                 'If there are no special objects other than the floor, say \'nothing\'. '  # PathR
                                 'Example 1) There are people on the right side. '
                                 'Example 2) There are nothing than the floor on the right side. '  # PathR
                                 )  # DESC1 or 2
         if trial_num == list_ids_sep[3]:
             # Path
-            list_prompt1.append(f'Assume the visible area in the image is the user\'s path and the user moves forward along the visible area of the image. '
-                                'Analyze the visible area and provide a one-sentence description of what objects are on the path. '
+            list_prompt1.append(f'Assume the user is moving along a 2-meter-wide path from the starting point [0.5, 1.0] to the destination {dest_descriptions} in the image. '
+                                'Analyze the input image and provide a one-sentence description of what objects are on the path. '
                                 'Example 1) There are cars and people on the path. '
                                 'Example 2) There are nothing on the path. '
                                 )  # DESC1 or 2
