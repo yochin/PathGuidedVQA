@@ -905,3 +905,4 @@ yolo/WEIGHTS/gd_demo/train958/weights/best.pt
 yolo/WEIGHTS/gd_demo/train958/weights/last.pt
 prompt_lib/__pycache__/PathLRPathDescDeci.cpython-310.pyc
 prompt_lib/__pycache__/Baseline.cpython-310.pyc
+depth_anything_v2
