@@ -7,7 +7,7 @@ import logging
 import random
 import shutil
 from glob import glob
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 def parse_args():
@@ -56,6 +56,7 @@ def find_images_in_directory(directory):
 #     for img_path in selected_images:
 #         try:
 #             img = Image.open(img_path)
+#             img = ImageOps.exif_transpose(img)
 #             img.verify()  # 이미지가 손상되지 않았는지 확인
 #             shutil.copy(img_path, destination_folder)
 #             logging.info(f'Success copying {img_path}')
@@ -86,6 +87,7 @@ def copy_random_images(image_files, destination_folder, num_images, ref_folder):
     for img_path in selected_images:
         try:
             img = Image.open(img_path)
+            img = ImageOps.exif_transpose(img)
             img.verify()  # 이미지가 손상되지 않았는지 확인
             shutil.copy(img_path, destination_folder)
             logging.info(f'Success copying {img_path}')
