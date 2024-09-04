@@ -845,6 +845,7 @@ def pcd_lpp(depth_img, goal_cxcy, output_path_debug):
 
     # red dot & blue dot image
     img_as = Image.open(img_path)
+    img_as = ImageOps.exif_transpose(img_as)
     img_draw = img_as.convert('RGB')     # RGBA to RGB
     draw = ImageDraw.Draw(img_draw)
     radius = 20
@@ -970,6 +971,7 @@ def main():
      
         # 이미지를 열고
         img_as = Image.open(img_path)
+        img_as = ImageOps.exif_transpose(img_as)
         img = img_as.convert('RGB')     # RGBA to RGB
         whole_width, whole_height = img.size
 

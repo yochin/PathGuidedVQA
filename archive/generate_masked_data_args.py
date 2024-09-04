@@ -626,6 +626,7 @@ def main():
      
         # 이미지를 열고
         img = Image.open(img_path)
+        img = ImageOps.exif_transpose(img)
         whole_width, whole_height = img.size
 
         cv_org_img = cv2.imread(img_path)
@@ -888,6 +889,7 @@ def main():
             # 4.3. draw all whole original image
             # draw start, mid, and goal points and boxes
             img = Image.open(img_path)
+            img = ImageOps.exif_transpose(img)
             # img_note = Image.new('RGB', (whole_width, int(whole_height*1.5)), color='white')    # note at bottom
             img_note = Image.new('RGB', (int(whole_width*2), int(whole_height)), color='white')    # note at right
             img_note.paste(img, (0, 0))

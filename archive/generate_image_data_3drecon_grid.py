@@ -597,6 +597,7 @@ def main():
      
         # 이미지를 열고
         img = Image.open(img_path)
+        img = ImageOps.exif_transpose(img)
         whole_width, whole_height = img.size
 
         # 1. read annotation and convert into bboxes with label info.
@@ -822,6 +823,7 @@ def main():
 
             # # red dot & blue dot image
             # img_as = Image.open(img_path)
+            # img_as = ImageOps.exif_transpose(img_as)
             # img_draw = img_as.convert('RGB')     # RGBA to RGB
             # draw = ImageDraw.Draw(img_draw)
             # radius = 20
