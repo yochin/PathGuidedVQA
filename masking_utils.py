@@ -2,7 +2,7 @@ import os
 import math
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageOps
 from depth_anything_wrapper import depth_anything
 from generate_image_data import save_and_visualize_depth_map
 
@@ -131,7 +131,6 @@ def create_trapezoid_mask(cv_img, target_point, r):
     cv2.fillPoly(mask, [trapezoid], (255, 255, 255))
         
     return mask
-    
 
 def save_debug_masked_image(img_path, cv_img, dict_masks, debug_img_folder):
     file_with_ext = os.path.split(img_path)[1]
@@ -397,6 +396,7 @@ if __name__ == '__main__':
         img_file_wo_ext = os.path.splitext(img_file)[0]
 
         img = Image.open(img_path).convert('RGB')
+        img = ImageOps.exif_transpose(img)
         whole_width, whole_height = img.size
 
         cv_org_img = cv2.imread(img_path)
@@ -512,6 +512,7 @@ if __name__ == '__main__':
             save_debug_masked_image(img_path, cv_org_img, dict_masks_debug2, output_path_debug)
 
         
+        # input depth_image has h x w x 3
         # depth_mask_near_path = mask_depth_image_path_radius(depth_image, path_array_xy, camera_intrinsics, physical_radius=2.0)
         depth_mask_near_path = mask_depth_image_using_path(depth_image, path_array_xy, camera_intrinsics, physical_half_width=1)
 

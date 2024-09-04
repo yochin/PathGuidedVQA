@@ -88,6 +88,7 @@ def main():
 
         # 이미지를 열고
         img = Image.open(img_path)
+        img = ImageOps.exif_transpose(img)
         # draw = ImageDraw.Draw(img)
         # font = ImageFont.truetype('arial.ttf', size=40)
 
@@ -139,6 +140,7 @@ def main():
             description = describe_all_bboxes_with_llava(llava_model_base_path, llava_model_path, img_path, bboxes, goal_label_cxcy)
 
             img = Image.open(img_path)
+            img = ImageOps.exif_transpose(img)
             draw = ImageDraw.Draw(img)
             #font = ImageFont.truetype('arial.ttf', size=40)
             font = ImageFont.load_default()

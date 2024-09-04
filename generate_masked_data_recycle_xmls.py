@@ -29,7 +29,7 @@ from masking_utils import generate_mask, get_intrinsic_ratio, create_circle_mask
 from masking_utils import mask_dest_depth_lr, mask_depth_image_using_path, save_debug_masked_image, is_within_mask
 import json
 import xml.etree.ElementTree as ET
-
+import ast
 
 
 def parse_args():
@@ -301,6 +301,19 @@ def read_gp_from_xml(xml_file):
     return x_value, y_value
 
 
+def read_gp_from_output_typed_xml(xml_file):
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    x_y_list = root.find('goal_position_xy').text
+    x_y_list = ast.literal_eval(x_y_list)
+
+    x_value = float(x_y_list[0])
+    y_value = float(x_y_list[1])
+
+    return x_value, y_value
+
+
 def apply_blur_to_masked_area(image, mask, blur_strength=15):
     """
     이미지에서 마스크된 영역에 블러링을 적용하는 함수.
@@ -337,6 +350,46 @@ def apply_blur_to_masked_area(image, mask, blur_strength=15):
     result_image = cv2.add(non_blurred_part, blurred_part)
 
     return result_image
+
+def get_xml_info(reuse_xml_path):
+    reuse_xml_info = {
+        'query': {},
+        'answer': {}
+    }
+
+    output_root = ET.parse(reuse_xml_path).getroot()
+
+    # Answer
+    eval_infer_tags = ['dest_desc', 'left_desc', 'right_desc', 'path_desc', 'desc_before_llm', 'recommend']
+
+    for i, pred_tag in enumerate(eval_infer_tags):
+
+        output_desc = output_root.find(pred_tag)
+        if output_desc == None:
+            output_desc = ''
+            continue
+        else:
+            output_desc = output_desc.text.strip()
+
+        reuse_xml_info['answer'][pred_tag] = output_desc
+
+
+    # Query
+    eval_infer_tags2 = ['dest_query', 'left_query', 'right_query', 'path_query', 'query_before_llm', 'recommend_query']
+
+    for i, pred_tag in enumerate(eval_infer_tags2):
+
+        output_desc = output_root.find(pred_tag)
+        if output_desc == None:
+            output_desc = ''
+            continue
+        else:
+            output_desc = output_desc.text.strip()
+
+        reuse_xml_info['query'][pred_tag] = output_desc
+
+    return reuse_xml_info
+
 
 # Assisted by ChatGPT 4
 def main():
@@ -477,6 +530,11 @@ def main():
         logging.info('==============================')
         logging.info(f'@main - processing {img_path}...')
 
+        if conf['reuse_xml']['use']:
+            reuse_xml_path = os.path.join(conf['reuse_xml']['xml_dir'], img_file_wo_ext + '.xml')
+            reuse_xml_info = get_xml_info(reuse_xml_path)
+
+
         output_filename_qa = os.path.join(output_path_qa, img_file_wo_ext + '.xml')
 
         if os.path.exists(output_filename_qa):
@@ -586,6 +644,14 @@ def main():
             else:
                 logging.info(f'No GPs due to No anno file, {path_to_gp}')
 
+        elif gp_method == 'load_output_typed_xml':
+            path_to_gp = os.path.join(anno_path_gp, img_file_wo_ext + '.xml')
+            if os.path.exists(path_to_gp):
+                cx, cy = read_gp_from_output_typed_xml(path_to_gp)
+                list_labels_gps = [['point', [cx, cy]]]
+                logging.info(f'Set GP {list_labels_gps[0][0]}, {list_labels_gps[0][1]} from anno file, {path_to_gp}')
+            else:
+                logging.info(f'No GPs due to No anno file, {path_to_gp}')
 
         if len(list_labels_gps) == 0:
             res_gp = None
@@ -836,7 +902,9 @@ def main():
             final_description = []
 
             # description with VLM
-            for ppt_target in ['D', 'L', 'R', 'P', 'Desc']:
+            for ppt_target, reuse_tag, reuse_tag_q in zip(['D', 'L', 'R', 'P', 'Desc'],
+                                             ['dest_desc', 'left_desc', 'right_desc', 'path_desc', 'desc_before_llm'],
+                                             ['dest_query', 'left_query', 'right_query', 'path_query', 'query_before_llm']):
                 if ppt_target in ['Desc']:
                     ppt_id_list_img_path = list_img_path
                     ppt_bboxes = bboxes
@@ -847,11 +915,15 @@ def main():
                     ppt_id_list_img_path = [os.path.join(output_path_debug, f'{filename}_{ppt_target}{ext}')]
                     ppt_bboxes = dict_bboxes[ppt_target]
                     
-                ppt_query, ppt_desc = lvm.describe_whole_images_with_boxes(ppt_id_list_img_path, ppt_bboxes, goal_label_cxcy, 
-                                                                            step_by_step=True, 
-                                                                            list_example_prompt=list_example_prompt,
-                                                                            prompt_id=ppt_target, 
-                                                                            prefix_prompt=None)
+                if conf['reuse_xml']['use'] and conf['reuse_xml'][reuse_tag]:
+                    ppt_query = reuse_xml_info['query'][reuse_tag_q]
+                    ppt_desc = reuse_xml_info['answer'][reuse_tag]
+                else:
+                    ppt_query, ppt_desc = lvm.describe_whole_images_with_boxes(ppt_id_list_img_path, ppt_bboxes, goal_label_cxcy, 
+                                                                                step_by_step=True, 
+                                                                                list_example_prompt=list_example_prompt,
+                                                                                prompt_id=ppt_target, 
+                                                                                prefix_prompt=None)
                 for rem in list_removal_tokens:
                     ppt_query = ppt_query.replace(rem, '')
                     ppt_desc = ppt_desc.replace(rem, '')
@@ -868,53 +940,60 @@ def main():
 
             # decision using LLM/GPT/VLM
             ppt_target = 'Decs'
+            reuse_tag = 'recommend'
+            reuse_tag_q = 'recommend_query'
 
-            list_prompt, list_system = prompt_lib.get_prompt(goal_label_cxcy, ppt_bboxes, trial_num=ppt_target, sep_system=True)
-            llm_system = list_system[0]
-
-            prefix_prompt = [' '.join(final_description)]
-
-            llm_prompt = f'The image description is following: {prefix_prompt[0]} {list_prompt[0]} Say only the answers. '
-
-            if use_llm_decision:
-                response = llm_model.generate_llm_response(llm_system, llm_prompt)
-                logging.info(f'filename: LLM Decision')
-            elif use_gpt_decision:
-                response = gpt_model.generate_llm_response(llm_system, llm_prompt, seed=gpt_seed, temperature=gpt_temperature)
-                logging.info(f'filename: GPT Decision')
+            if conf['reuse_xml']['use'] and conf['reuse_xml'][reuse_tag]:
+                llm_prompt = reuse_xml_info['query'][reuse_tag_q]
+                response = reuse_xml_info['answer'][reuse_tag]
             else:
-                response = lvm.generate_vlm_response(llm_system, llm_prompt, image_path=list_img_path[-1])
-                for rem in list_removal_tokens:
-                    response = response.replace(rem, '')
-                logging.info(f'filename: VLM Decision')
+                list_prompt, list_system = prompt_lib.get_prompt(goal_label_cxcy, bboxes, trial_num=ppt_target, sep_system=True)
+                llm_system = list_system[0]
+
+                prefix_prompt = [' '.join(final_description)]
+
+                llm_prompt = f'The image description is following: {prefix_prompt[0]} {list_prompt[0]} Say only the answers. '
+
+                if use_llm_decision:
+                    response = llm_model.generate_llm_response(llm_system, llm_prompt)
+                    logging.info(f'filename: LLM Decision')
+                elif use_gpt_decision:
+                    response = gpt_model.generate_llm_response(llm_system, llm_prompt, seed=gpt_seed, temperature=gpt_temperature)
+                    logging.info(f'filename: GPT Decision')
+                else:
+                    response = lvm.generate_vlm_response(llm_system, llm_prompt, image_path=list_img_path[-1])
+                    for rem in list_removal_tokens:
+                        response = response.replace(rem, '')
+                    logging.info(f'filename: VLM Decision')
 
             final_query.append(llm_prompt)
             final_description.append(response)
 
             logging.info(f'query: {llm_prompt}')
             logging.info(f'desc: {response}')
-            logging.info(f'bboxes: {ppt_bboxes}')
-                
+            logging.info(f'bboxes: {bboxes}')
 
 
-            # summarization using LLM/GPT/VLM
-            llm_prompt_system = 'A chat between a human and an AI that understands visuals in English. '
-            llm_prompt_summary_cmd = 'Summarize the following sentences into one sentence. '\
-                                        'The summarized sentence should include what is at the destination, on the left, on the right, and on the path, the recommended action, and its reason. '\
-                                        'Answer with the summarized content only. '
-            llm_prompt_summary = f'{llm_prompt_summary_cmd} This is sentences: {final_description[0]} {final_description[1]} {final_description[2]} {final_description[3]} {final_description[5]}'
+            # # summarization using LLM/GPT/VLM
+            # llm_prompt_system = 'A chat between a human and an AI that understands visuals in English. '
+            # llm_prompt_summary_cmd = 'Summarize the following sentences into one sentence. '\
+            #                             'The summarized sentence should include what is at the destination, on the left, on the right, and on the path, the recommended action, and its reason. '\
+            #                             'Answer with the summarized content only. '
+            # llm_prompt_summary = f'{llm_prompt_summary_cmd} This is sentences: {final_description[0]} {final_description[1]} {final_description[2]} {final_description[3]} {final_description[5]}'
 
-            if use_llm_summary:
-                response_summary = llm_model.generate_llm_response(llm_prompt_system, llm_prompt_summary)
-                logging.info(f'filename: LLM Summary')
-            elif use_gpt_summary:
-                response_summary = gpt_model.generate_llm_response(llm_prompt_system, llm_prompt_summary, seed=gpt_seed, temperature=gpt_temperature)
-                logging.info(f'filename: GPT Summary')
-            else:
-                response_summary = lvm.generate_vlm_response(llm_prompt_system, llm_prompt_summary)
-                for rem in list_removal_tokens:
-                    response_summary = response_summary.replace(rem, '')
-                logging.info(f'filename: VLM Summary')
+            # if use_llm_summary:
+            #     response_summary = llm_model.generate_llm_response(llm_prompt_system, llm_prompt_summary)
+            #     logging.info(f'filename: LLM Summary')
+            # elif use_gpt_summary:
+            #     response_summary = gpt_model.generate_llm_response(llm_prompt_system, llm_prompt_summary, seed=gpt_seed, temperature=gpt_temperature)
+            #     logging.info(f'filename: GPT Summary')
+            # else:
+            #     response_summary = lvm.generate_vlm_response(llm_prompt_system, llm_prompt_summary)
+            #     for rem in list_removal_tokens:
+            #         response_summary = response_summary.replace(rem, '')
+            #     logging.info(f'filename: VLM Summary')
+            llm_prompt_summary = ''
+            response_summary = ''
             
 
             final_query.append(llm_prompt_summary)

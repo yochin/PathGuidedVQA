@@ -79,6 +79,7 @@ class LargeMultimodalModels():
             raise AssertionError(f'{self.model_name} is not supported!')
         
         return res_query, res_answer
+    
 
 
     def describe_all_bboxes_with_dummy(self):
@@ -134,6 +135,28 @@ class LargeMultimodalModels():
 
     #     return answer
 
+    def generate_vlm_response(self, sys_prompt, user_prompt, image_path=None):
+        set_seed(42)
+        input_temperature = 0.6
+        input_top_p = 0.9
+
+        list_system = [sys_prompt]
+        list_prompt = [user_prompt]
+
+        if image_path is None:
+            image_files = []
+        else:
+            image_files = [image_path]
+
+        list_answer = run_llava16_model_cli(self.llava_tokenizer, self.llava_model, self.llava_image_processor, self.llava_context_len, self.llava_model_name, 
+                                            image_files=image_files, list_queries=list_prompt, input_conv_mode=self.llava_input_conv_mode,
+                                            input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1,
+                                            input_max_new_tokens=512, input_debug=True, list_system=list_system,
+                                            use_ex_image=False)
+        
+        response = list_answer[0]
+
+        return response
     
     def describe_all_bboxes_with_llava(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, model_name=None, 
                                        list_example_prompt=[], prompt_id=18, prefix_prompt=None):

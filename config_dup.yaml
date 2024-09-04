@@ -1,4 +1,4 @@
-task_name: Masking_AddYOLO_FewExample_DescLLaVA_DecsGPT_SumLLama38binst_val20k
+task_name: Masking_AddYOLO_FewExample_DescLLaVA_DecsGPT_SumLLama38binst_val20k_dup
 
 vlm:
     model_name: llava16_cli     # [llava16_cli | chatgpt]
@@ -38,7 +38,7 @@ image_server:
 
 db:
     base_dir: ../val20k
-    images: original_images
+    images: original_images_dup
     depths: depth_anything_v2
     det_anno_pred: det_anno_pred
     det_anno_gt: det_anno_gt

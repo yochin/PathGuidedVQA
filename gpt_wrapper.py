@@ -24,9 +24,12 @@ class gpt_wrapper():
         else:
             encoded_image = None
         
-        messages = [
-            {"role": "system", "content": sys_prompt}
-        ]
+        if len(sys_prompt) == 0:
+            messages = []
+        else:
+            messages = [
+                {"role": "system", "content": sys_prompt}
+            ]
 
         print(f'@gpt - automatic user input: {user_prompt}')
 
@@ -72,8 +75,8 @@ class gpt_wrapper():
                 logging.info(f'response: {response}')
 
                 return response
-            except openai.error.OpenAIError as e:
-                logging.info(f"OpenAI API call error: {e}")
+            except openai.OpenAIError as e:
+                logging.info(f"OpenAIError Error: {e}")
 
                 if attempt < self.max_retry - 1:
                     logging.info(f"{self.retry_delay}second after {attempt+1}-th try again.")

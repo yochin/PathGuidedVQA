@@ -508,7 +508,7 @@ def validate_point(point, max_x, max_y, margin=0):
     return (x, y)
 
 
-def draw_path_on_scaled_image(depth_map, path, start, goal, rgb_image, filename="path_on_depth_image.png", radius=2):
+def draw_path_on_scaled_image(depth_map, path, start, goal, rgb_image, filename="path_on_depth_image.png", radius=2, fixed_img_h=None):
     # 이미지 크기에 따라 점 위치 확인 및 조정
     height, width = depth_map.shape
     img_size_wh = rgb_image.size
@@ -537,6 +537,13 @@ def draw_path_on_scaled_image(depth_map, path, start, goal, rgb_image, filename=
     draw.ellipse([start_dot_lu, start_dot_br], fill='yellow')
     # draw GP as orange point
     draw.ellipse([goal_dot_lu, goal_dot_br], fill='orange')
+
+    if fixed_img_h is not None:
+        resize_ratio = float(fixed_img_h) / float(img_size_hw[0])
+        fixed_img_w = int(resize_ratio * img_size_hw[1])
+
+        rgb_image.resize((fixed_img_w, fixed_img_h))
+
 
     # 이미지 파일로 저장
     rgb_image.save(filename)

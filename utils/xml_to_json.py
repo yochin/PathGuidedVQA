@@ -1,8 +1,39 @@
 import os
+import sys
 import xml.etree.ElementTree as ET
 import json
 import ast
 import pdb
+
+import argparse
+import yaml
+import logging
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Copy image files')   
+
+    parser.add_argument('--config', type=str, required=True)
+
+    args = parser.parse_args()
+
+    return args
+
+def set_path_logger(path_to_log):
+    if not os.path.exists(os.path.split(path_to_log)[0]):
+        os.makedirs(os.path.split(path_to_log)[0])
+
+    logFormatter = logging.Formatter('%(asctime)s %(levelname)s:%(message)s', datefmt='%Y/%m/%d %p %I:%M:%S, ')
+    logFileHandler = logging.FileHandler(path_to_log)
+    logConsoleHandler = logging.StreamHandler(sys.stdout)
+
+    logFileHandler.setFormatter(logFormatter)
+    logConsoleHandler.setFormatter(logFormatter)
+
+    logging.getLogger().addHandler(logFileHandler)
+    logging.getLogger().addHandler(logConsoleHandler)
+    logging.getLogger().setLevel(logging.DEBUG)
+
 
 def sample_list(input_list, n):
     if n <= 2:
@@ -103,10 +134,19 @@ def convert_xml_files(source_dir, target_dir):
         except Exception as e:
             print(f"Error converting {xml_file}: {str(e)}")
 
+
 if __name__ == '__main__':
+    args = parse_args()
+
+    with open(args.config) as fid:
+        conf = yaml.load(fid, Loader=yaml.FullLoader)
+
+    # set a log file path        
+    path_to_log = os.path.join(conf['output_dir'], conf['task_name'], 'xml_to_json.log')
+    set_path_logger(path_to_log)
+
     # Example usage
-    source_directory = '/media/NAS_GDHRI/dbs/PathGuidedVQA/2024.08.06/DestMasking_DrawDepthPoint_FewExample_DecGPT_SumLLama38binst_DBval20k_Try2/qa'
-    target_directory = '/media/NAS_GDHRI/dbs/PathGuidedVQA/2024.08.06/DestMasking_DrawDepthPoint_FewExample_DecGPT_SumLLama38binst_DBval20k_Try2/qa_json'
+    source_directory = os.path.join(conf['output_dir'], conf['task_name'], 'qa')
+    target_directory = os.path.join(conf['output_dir'], conf['task_name'], 'qa_json')
 
     convert_xml_files(source_directory, target_directory)
-
