@@ -1,6 +1,6 @@
 import os
 import tkinter as tk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageOps
 import xml.etree.ElementTree as ET
 
 class ImageAnnotator:
@@ -31,6 +31,7 @@ class ImageAnnotator:
         if self.index < len(self.images):
             img_path = os.path.join(self.image_folder, self.images[self.index])
             self.img = Image.open(img_path)
+            self.img = ImageOps.exif_transpose(self.img)
             self.tkimg = ImageTk.PhotoImage(self.img)
 
             # Resize window to fit the image
