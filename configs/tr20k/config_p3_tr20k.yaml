@@ -16,7 +16,7 @@ gpt:
     use_decision: False
     seed: 17
     temperature: 0.2
-    api_key: abcde
+    api_key: use-your-own-key
 
 prompt_lib_name: Baseline
 
