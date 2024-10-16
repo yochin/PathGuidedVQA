@@ -9,6 +9,7 @@ from transformers import set_seed
 import sys
 import importlib
 import pdb
+import time
 
 
 def encode_image_to_base64(image_path):
@@ -57,7 +58,7 @@ class LargeMultimodalModels():
         
 
     def describe_whole_images_with_boxes(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, list_example_prompt=[], 
-                                         prompt_id=18, prefix_prompt=None):
+                                         prompt_id=18, prefix_prompt=None, get_time=False):
         print('\n')
         print('@describe_whole_images_with_boxes - image_path:', image_path)
         print('@describe_whole_images_with_boxes - bboxes:', bboxes)
@@ -73,12 +74,12 @@ class LargeMultimodalModels():
         if self.model_name == 'dummy':
             res_answer = self.describe_all_bboxes_with_dummy()
         elif self.model_name in ['llava', 'ferret', 'llava16', 'llava16_cli', 'chatgpt']:
-            res_query, res_answer = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, step_by_step, self.model_name, 
-                                                                        list_example_prompt, prompt_id, prefix_prompt)
+            res_query, res_answer, elapsed_time = self.describe_all_bboxes_with_llava(image_path, bboxes, goal_label_cxcy, step_by_step, self.model_name, 
+                                                                        list_example_prompt, prompt_id, prefix_prompt, get_time)
         else:
             raise AssertionError(f'{self.model_name} is not supported!')
         
-        return res_query, res_answer
+        return res_query, res_answer, elapsed_time
     
 
 
@@ -159,7 +160,7 @@ class LargeMultimodalModels():
         return response
     
     def describe_all_bboxes_with_llava(self, image_path, bboxes, goal_label_cxcy, step_by_step=False, model_name=None, 
-                                       list_example_prompt=[], prompt_id=18, prefix_prompt=None):
+                                       list_example_prompt=[], prompt_id=18, prefix_prompt=None, get_time=False):
         set_seed(42)
         input_temperature = 0.6
         input_top_p = 0.9
@@ -175,11 +176,32 @@ class LargeMultimodalModels():
                 list_prompt = [' '.join(prefix_prompt + list_prompt)]
 
             if model_name == 'llava16_cli':
-                list_answer = run_llava16_model_cli(self.llava_tokenizer, self.llava_model, self.llava_image_processor, self.llava_context_len, self.llava_model_name, 
+                max_retries = 5
+                retries = 0
+                delay = 1
+
+                list_answer = [None] * len(list_prompt)
+                while retries < max_retries:
+                    try:
+                        start_time = time.time()
+                        list_answer = run_llava16_model_cli(self.llava_tokenizer, self.llava_model, self.llava_image_processor, self.llava_context_len, self.llava_model_name, 
                                                     image_files=image_path, list_queries=list_prompt, input_conv_mode=self.llava_input_conv_mode,
                                                     input_temperature=input_temperature, input_top_p=input_top_p, input_num_beams=1,
                                                     input_max_new_tokens=512, input_debug=True, list_ex_prompt=list_example_prompt, list_system=list_system,
                                                     use_ex_image=False)
+                        end_time = time.time()
+                        elapsed_time = end_time - start_time
+                        break  # 오류가 없으면 루프 종료
+                    except Exception as e:
+                        retries += 1
+                        print(f"LLava에서 오류 발생: {e}. {delay}초 후 다시 시도합니다... (재시도 횟수: {retries})")
+                        time.sleep(delay)  # 지연 후 재시도
+
+                if retries == max_retries:
+                    print(f"최대 재시도 횟수 {max_retries}에 도달하여 실행을 중단합니다.")
+                    list_answer = [None] * len(list_prompt)
+                    elapsed_time = 0
+                
             elif model_name == 'chatgpt':
                 # 이미지를 base64로 인코딩
                 encoded_image = encode_image_to_base64(image_path[0])
@@ -296,7 +318,7 @@ class LargeMultimodalModels():
         # print('query: ', prompt)
         # print('answer: ', res_answer)
 
-        return prompt, res_answer
+        return prompt, res_answer, elapsed_time
 
 
 import os

@@ -178,6 +178,35 @@ def create_depth_mask(depth_image, target_point, radius, buffer_dist):
     
     return mask
 
+
+def create_depth_mask_velocity(depth_image, target_point, radius, buffer_dist):
+    
+    x, y = target_point
+    height, width = depth_image.shape
+    
+    # Ensure the radius is within the image bounds
+    x_min = max(x - radius, 0)
+    x_max = min(x + radius, width)
+    y_min = max(y - radius, 0)
+    y_max = min(y + radius, height)
+    
+    # Extract the region of interest
+    roi = depth_image[y_min:y_max, x_min:x_max]
+    
+    # Create a mask where depth is greater than the average depth
+    mask = np.zeros_like(depth_image, dtype=np.uint8)
+    
+    # Calculate the average depth in the region of interest
+    avg_depth = np.max(roi)
+    thresh_depth = avg_depth + buffer_dist
+    
+    mask[depth_image < thresh_depth] = 255
+
+    mask = np.stack((mask,)*3, axis=-1)
+    
+    return mask
+
+
 def is_within_mask(mask, bbox_info, threshold=0.1):    
     _, box, _ = bbox_info
     x1, y1, x2, y2 = box
@@ -204,7 +233,7 @@ def calculate_boundaries(x, y, depth, physical_width, fx, fy, image_width):
     주어진 위치와 깊이에 기반하여 수평 경계의 x 좌표를 계산합니다.
     """    
     # pixel_width = int((physical_width / depth) * ((fx + fy) / 2))
-    pixel_width = int((physical_width / depth) * fx)
+    pixel_width = int((physical_width / depth) * fx)    # physical_width is a half of width
     left_x = max(x - pixel_width, 0)
     right_x = min(x + pixel_width, image_width - 1)
     # print(x, y, depth, left_x, right_x)

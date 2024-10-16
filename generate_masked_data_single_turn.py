@@ -421,7 +421,6 @@ def main():
     prompt_lib = importlib.import_module(prompt_lib_name)
     
     if gp_method in ['load_anno', 'load_xml']:
-        logging.info(f'@main - check anno_path_gp: {anno_path_gp}')
         assert os.path.exists(anno_path_gp)
 
     if gp_method == 'select_det':
@@ -429,6 +428,7 @@ def main():
 
         list_goal_names = read_text(label_path_gp)
         logging.info(f'@main - list_gp_det_names: {list_goal_names}')
+
   
     # related to output
     output_path_qa = os.path.join(output_path, 'qa')
@@ -716,11 +716,12 @@ def main():
                 np.clip(int(y*whole_height), 0, whole_height-1)
                 ] for x, y in path_array]
             
-            if use_org_image:   # original images is used as masked images for all regions
-                save_debug_masked_image(img_path, cv_org_img, {'D': None, 'P': None, 'L': None, 'R': None}, output_path_debug)
-                dict_bboxes = {'D': bboxes, 'P': bboxes, 'L': bboxes, 'R': bboxes}
+            if use_org_image:
+                # save_debug_masked_image(img_path, cv_org_img, {'D': None, 'P': None, 'L': None, 'R': None}, output_path_debug)
+                # dict_bboxes = {'D': bboxes, 'P': bboxes, 'L': bboxes, 'R': bboxes}
+                pass
             else:
-                # ['L', 'R']: generate masks with left all and right all masks
+                # generate masks with left all and right all masks
                 dict_masks = generate_mask(cv_org_img_pt, path_array_xy)    # ['L', 'R'], all left and right area along with path.
                 # cv_org_img_pt: w x h x 3
                 # dict_masks['L', 'R']: w x h x 3 from color image
@@ -767,6 +768,7 @@ def main():
                         # 'Dst1': dict_masks['D'],
                     }
                     save_debug_masked_image(img_path, cv_org_img, dict_masks_debug2, output_path_debug)
+
                 
                 # depth_mask_near_path = mask_depth_image_path_radius(depth_image, path_array_xy, camera_intrinsics, physical_radius=2.0)
                 # depth_images: h x w x 3
@@ -834,60 +836,56 @@ def main():
                     blured_cv_org_img = apply_blur_to_masked_area(cv_org_img, ~depth_mask_front, int(whole_height/50))
                     save_debug_masked_image(img_path, blured_cv_org_img, {'D': dict_masks['D'], 'Blur_front': blured_cv_org_img}, output_path_debug)
 
-                if not dst_masking_depth:
-                    save_debug_masked_image(img_path, cv_org_img, {'D': None}, output_path_debug)
-                    dict_bboxes['D'] = bboxes
-
-
-            logging.debug(f'dict_bboxes: {dict_bboxes}')
+            # logging.debug(f'dict_bboxes: {dict_bboxes}')
 
             list_removal_tokens = ['<|startoftext|>', '<|im_end|>', '[!@#$NEXT!@#$]']
 
-            final_query = []
-            final_description = []
+            # final_query = []
+            # final_description = []
 
-            # description with VLM
             inference_time = 0.0
-            for ppt_target in ['D', 'L', 'R', 'P', 'Desc']:
-                if ppt_target in ['Desc']:
-                    ppt_id_list_img_path = list_img_path
-                    ppt_bboxes = bboxes
-                else:
-                    file_with_ext = os.path.split(img_path)[1]
-                    filename, ext = os.path.splitext(file_with_ext)
+            # # description with VLM                        
+            # for ppt_target in ['D', 'L', 'R', 'P', 'Desc']:
+            #     if ppt_target in ['Desc']:
+            #         ppt_id_list_img_path = list_img_path
+            #         ppt_bboxes = bboxes
+            #     else:
+            #         file_with_ext = os.path.split(img_path)[1]
+            #         filename, ext = os.path.splitext(file_with_ext)
 
-                    ppt_id_list_img_path = [os.path.join(output_path_debug, f'{filename}_{ppt_target}{ext}')]
-                    ppt_bboxes = dict_bboxes[ppt_target]
+            #         ppt_id_list_img_path = [os.path.join(output_path_debug, f'{filename}_{ppt_target}{ext}')]
+            #         ppt_bboxes = dict_bboxes[ppt_target]
                     
-                ppt_query, ppt_desc, elapsed_time = lvm.describe_whole_images_with_boxes(ppt_id_list_img_path, ppt_bboxes, goal_label_cxcy, 
-                                                                                         step_by_step=True, 
-                                                                                         list_example_prompt=list_example_prompt,
-                                                                                         prompt_id=ppt_target, 
-                                                                                         prefix_prompt=None, get_time=True)
-                inference_time += elapsed_time
+            #     ppt_query, ppt_desc, elapsed_time = lvm.describe_whole_images_with_boxes(ppt_id_list_img_path, ppt_bboxes, goal_label_cxcy, 
+            #                                                                              step_by_step=True, 
+            #                                                                              list_example_prompt=list_example_prompt,
+            #                                                                              prompt_id=ppt_target, 
+            #                                                                              prefix_prompt=None, get_time=True)
+            #     inference_time += elapsed_time
 
-                for rem in list_removal_tokens:
-                    ppt_query = ppt_query.replace(rem, '')
-                    ppt_desc = ppt_desc.replace(rem, '')
+            #     for rem in list_removal_tokens:
+            #         ppt_query = ppt_query.replace(rem, '')
+            #         ppt_desc = ppt_desc.replace(rem, '')
 
-                final_query.append(ppt_query)
-                final_description.append(ppt_desc)
+            #     final_query.append(ppt_query)
+            #     final_description.append(ppt_desc)
 
-                logging.info(f'filename: {ppt_id_list_img_path}')
-                logging.info(f'query: {ppt_query}')
-                logging.info(f'desc: {ppt_desc}')
-                logging.info(f'bboxes: {ppt_bboxes}')
-                logging.info(f'\telapsed time: {elapsed_time}')
+            #     logging.info(f'filename: {ppt_id_list_img_path}')
+            #     logging.info(f'query: {ppt_query}')
+            #     logging.info(f'desc: {ppt_desc}')
+            #     logging.info(f'bboxes: {ppt_bboxes}')
+            #     logging.info(f'\telapsed time: {elapsed_time}')
 
             # decision using LLM/GPT/VLM
             ppt_target = 'Decs'
 
-            list_prompt, list_system = prompt_lib.get_prompt(goal_label_cxcy, ppt_bboxes, trial_num=ppt_target, sep_system=True)
+            list_prompt, list_system = prompt_lib.get_prompt(goal_label_cxcy, bboxes, trial_num=ppt_target, sep_system=True)
             llm_system = list_system[0]
 
-            prefix_prompt = [' '.join(final_description)]
+            # prefix_prompt = [' '.join(final_description)]
 
-            llm_prompt = f'The image description is following: {prefix_prompt[0]} {list_prompt[0]} Say only the answers. '
+            # llm_prompt = f'The image description is following: {prefix_prompt[0]} {list_prompt[0]} Say only the answers. '
+            llm_prompt = list_prompt[0]
 
             start_time = time.time()
             if use_llm_decision:
@@ -905,42 +903,47 @@ def main():
             elapsed_time = end_time - start_time            
             inference_time += elapsed_time
 
+            # Parsing the response
+            final_query = ['', '', '', '', '']
             final_query.append(llm_prompt)
-            final_description.append(response)
+            try:
+                response_lines = response.strip().split("\n")
+                final_description = [response_line.split(":", 1)[1] for response_line in response_lines]
+                # final_description.append(response)
+            except Exception as e:
+                final_description = [response] * 6
 
             logging.info(f'query: {llm_prompt}')
             logging.info(f'desc: {response}')
-            logging.info(f'bboxes: {ppt_bboxes}')
+            logging.info(f'bboxes: {bboxes}')
             logging.info(f'\telapsed time: {elapsed_time}')
-                
 
-            # summarization using LLM/GPT/VLM
-            llm_prompt_system = 'A chat between a human and an AI that understands visuals in English. '
-            llm_prompt_summary_cmd = 'Summarize the following sentences into one sentence. '\
-                                        'The summarized sentence should include what is at the destination, on the left, on the right, and on the path, the recommended action, and its reason. '\
-                                        'Answer with the summarized content only. '
-            llm_prompt_summary = f'{llm_prompt_summary_cmd} This is sentences: {final_description[0]} {final_description[1]} {final_description[2]} {final_description[3]} {final_description[5]}'
+            # # summarization using LLM/GPT/VLM
+            # llm_prompt_system = 'A chat between a human and an AI that understands visuals in English. '
+            # llm_prompt_summary_cmd = 'Summarize the following sentences into one sentence. '\
+            #                             'The summarized sentence should include what is at the destination, on the left, on the right, and on the path, the recommended action, and its reason. '\
+            #                             'Answer with the summarized content only. '
+            # llm_prompt_summary = f'{llm_prompt_summary_cmd} This is sentences: {final_description[0]} {final_description[1]} {final_description[2]} {final_description[3]} {final_description[5]}'
 
-            if use_llm_summary:
-                response_summary = llm_model.generate_llm_response(llm_prompt_system, llm_prompt_summary)
-                logging.info(f'filename: LLM Summary')
-            elif use_gpt_summary:
-                response_summary = gpt_model.generate_llm_response(llm_prompt_system, llm_prompt_summary, seed=gpt_seed, temperature=gpt_temperature)
-                logging.info(f'filename: GPT Summary')
-            else:
-                response_summary = lvm.generate_vlm_response(llm_prompt_system, llm_prompt_summary)
-                for rem in list_removal_tokens:
-                    response_summary = response_summary.replace(rem, '')
-                logging.info(f'filename: VLM Summary')
-            
+            # if use_llm_summary:
+            #     response_summary = llm_model.generate_llm_response(llm_prompt_system, llm_prompt_summary)
+            #     logging.info(f'filename: LLM Summary')
+            # elif use_gpt_summary:
+            #     response_summary = gpt_model.generate_llm_response(llm_prompt_system, llm_prompt_summary, seed=gpt_seed, temperature=gpt_temperature)
+            #     logging.info(f'filename: GPT Summary')
+            # else:
+            #     response_summary = lvm.generate_vlm_response(llm_prompt_system, llm_prompt_summary)
+            #     for rem in list_removal_tokens:
+            #         response_summary = response_summary.replace(rem, '')
+            #     logging.info(f'filename: VLM Summary')
 
-            final_query.append(llm_prompt_summary)
-            final_description.append(response_summary)
+            # final_query.append(llm_prompt_summary)
+            # final_description.append(response_summary)
+            # logging.info(f'query: {llm_prompt_summary}')
+            # logging.info(f'desc: {response_summary}')
 
-            
-            logging.info(f'query: {llm_prompt_summary}')
-            logging.info(f'desc: {response_summary}')
-
+            final_query.append('')
+            final_description.append('')
 
 
             # check None response

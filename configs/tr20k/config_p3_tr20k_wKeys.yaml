@@ -16,7 +16,7 @@ gpt:
     use_decision: False
     seed: 17
     temperature: 0.2
-    api_key: abcde
+    api_key: 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
 
 prompt_lib_name: Baseline
 
@@ -31,13 +31,13 @@ depth_anything:
     max_depth: 80       # meter
 
 image_server:
-    path: dbs/aihub_pwalk/organized/JPEGImages # 이미지 파일들이 있는 Server 폴더 경로
+    path: /media/NAS_GDHRI/dbs/aihub_pwalk/organized/JPEGImages # 이미지 파일들이 있는 Server 폴더 경로
     copy_to_db_images: True
     n_images: 20000
-    ref_path: output/tr20k/original_images
+    ref_path: /home/yochin/Desktop/PathGuidedVQA_Base/output/(2024.08.05)DestMasking_DrawPoint_NoExample_DecGPT_SumLLama38binst_DBvalMore4k/original_images
 
 db:
-    base_dir: output/tr20k
+    base_dir: /home/yochin/Desktop/PathGuidedVQA_Base/val20k_final
     images: original_images
     depths: depth_anything_v2
     det_anno_pred: det_anno_pred
@@ -58,7 +58,7 @@ dest:
     draw_bbox: False    # False only
     use_path_mask: True
 
-output_dir: output/today
+output_dir: /home/yochin/Desktop/PathGuidedVQA_Base/output/2024.09.02
 
 gp:
     method: load_output_typed_xml    # [load_output_typed_xml | load_xml | load_anno | select_det | set_front], if all methods are failed, set_front is the last.
@@ -73,7 +73,7 @@ apply_cam_intrinsic: True
 
 reuse_xml:
     use: True
-    xml_dir: output/today/Pipeline3_Tr20k/qa_from_p4
+    xml_dir: /home/yochin/Desktop/PathGuidedVQA_Base/output/2024.09.02/Pipeline3_Tr20k/qa_from_p4
     dest_desc: False
     left_desc: True
     right_desc: True
