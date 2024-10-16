@@ -1,6 +1,10 @@
 __pycache__/
+.vscode/
 ferret/
 iplanner/
+yolo/
+depth_anything_v2/
+archive/
 llava/WEIGHTS
 llava/__pycache__/
 llava/eval/__pycache__/
@@ -25,8 +29,4 @@ llava/serve/__pycache__/__init__.cpython-311.pyc
 llava/serve/__pycache__/cli.cpython-311.pyc
 samples_masking/
 utils/__pycache__/
-yolo/
 prompt_lib/__pycache__/
-depth_anything_v2/
-archive/
-.vscode/
