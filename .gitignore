@@ -19,6 +19,10 @@ run_yochin_multiple.sh
 run_yochin.sh
 GoogleNews-vectors-negative300.bin.gz
 samples_masking/
-utils/__pycache__/
+samples/
+utils/
 prompt_lib/__pycache__/
 configs_private/
+eval/clipscore/
+eval/run_eval_clipscore.sh
+run_arxiv.sh

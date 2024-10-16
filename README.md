@@ -18,7 +18,7 @@ This repository contains the code for our novel automated data generation pipeli
 ### Install
 Our code uses [LLaVA 1.6](https://github.com/haotian-liu/LLaVA), [Yolo-V8 Object Detector](https://github.com/ultralytics/ultralytics), and [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2/tree/main/metric_depth).
 
-* While LLaVA is already included in the code, you will need to install LLaVA by running the following command:
+* While LLaVA is already included in the code, you will need to install LLaVA by running the following command, then download the [llava-v1.6-34b](https://huggingface.co/liuhaotian/llava-v1.6-34b) and place them in the 'llm_models/llava' directory.
     ```bash
     pip install --upgrade pip  # enable PEP 660 support
     pip install -e .
@@ -31,6 +31,7 @@ Our code uses [LLaVA 1.6](https://github.com/haotian-liu/LLaVA), [Yolo-V8 Object
     ```bash
     git clone https://github.com/DepthAnything/Depth-Anything-V2 depth_anything_v2
     ```
+* You can use other directory names, and simply reflect these changes in the config file.
 
 ### Configuration
 Edit the configuration file configs/tr20k/config_p3_tr20k.yaml to set the paths to the models and adjust any parameters as needed.
