@@ -18,7 +18,7 @@ gpt:
     temperature: 0.2
     api_key: use-your-own-key
 
-prompt_lib_name: Baseline
+prompt_lib_name: WholeLRPathDescDeci
 
 yolo:
     dynamic_det_path: yolo/WEIGHTS/aihub_pwalk/train852/weights/best.pt
@@ -31,13 +31,13 @@ depth_anything:
     max_depth: 80       # meter
 
 image_server:
-    path: dbs/aihub_pwalk/organized/JPEGImages # 이미지 파일들이 있는 Server 폴더 경로
+    path: dbs/aihub_pwalk/organized/JPEGImages # server folder having image files
     copy_to_db_images: True
     n_images: 20000
-    ref_path: output/tr20k/original_images
+    ref_path: output/tr20k/original_images	   # directory for avoiding copying same files again
 
 db:
-    base_dir: output/tr20k
+    base_dir: output/tr20k					   # base_directory
     images: original_images
     depths: depth_anything_v2
     det_anno_pred: det_anno_pred
@@ -46,10 +46,10 @@ db:
     gp_info: gp_info_xml
     gt: desc_gt_en
 
-use_org_image: True        # True means No Masks
+use_org_image: False        # True means No Masks
 
 dest:
-    masking_depth: False
+    masking_depth: True
     depth_meter: 5.0
     masking_circle: False
     circle_ratio_w: 0.1
@@ -61,7 +61,7 @@ dest:
 output_dir: output/today
 
 gp:
-    method: load_output_typed_xml    # [load_output_typed_xml | load_xml | load_anno | select_det | set_front], if all methods are failed, set_front is the last.
+    method: set_front    # [load_output_typed_xml | load_xml | load_anno | select_det | set_front], if all methods are failed, set_front is the last.
     # This is temporary for testing algorithm
     method_set_front_type: ten_meters_from_below_point   # [manual | three_quarters | ten_meters_from_below_point | ten_meters_from_depth]
     max_search_degree: 45   # >= 0, int
@@ -71,13 +71,3 @@ local_path_planning: line  # [depth_lpp | line]
 
 apply_cam_intrinsic: True
 
-reuse_xml:
-    use: True
-    xml_dir: output/today/Pipeline3_Tr20k/qa_from_p4
-    dest_desc: False
-    left_desc: True
-    right_desc: True
-    path_desc: True
-    desc_before_llm: True
-    recommend: False
-    
