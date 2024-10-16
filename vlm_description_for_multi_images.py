@@ -33,7 +33,7 @@ class LargeMultimodalModels():
 
         # for gpt4
         if self.model_name == 'chatgpt':
-            self.OPENAI_API_KEY = "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"
+            self.OPENAI_API_KEY = "USE_YOUR_OWN_KEY"
         # for llava
         elif self.model_name in ['llava', 'llava16', 'llava16_cli']:
             self.llava_model_path = llava_model_path

@@ -90,7 +90,7 @@ class gpt_wrapper():
 if __name__ == '__main__':
     # llm_model_name = "gpt-4o-mini-2024-07-18"     # not trusted
     llm_model_name = 'gpt-4o-2024-08-06'
-    llm_model = gpt_wrapper(llm_model_name, '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')
+    llm_model = gpt_wrapper(llm_model_name, 'USE_YOUR_OWN_KEY')
 
     # list_gt_dest_desc = [
     #     'There is a truck on the left side of the path.',

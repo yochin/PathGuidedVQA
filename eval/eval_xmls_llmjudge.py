@@ -26,8 +26,8 @@ from gpt_wrapper import gpt_wrapper
 from llm_wrapper import llm_wrapper
 
 
-# gpt_model = gpt_wrapper('gpt-4o-mini-2024-07-18', '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')
-gpt_model = gpt_wrapper('gpt-4o-2024-08-06', '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')
+# gpt_model = gpt_wrapper('gpt-4o-mini-2024-07-18', 'USE_YOUR_OWN_KEY')
+gpt_model = gpt_wrapper('gpt-4o-2024-08-06', 'USE_YOUR_OWN_KEY')
 # gpt_model = llm_wrapper('meta-llama/Meta-Llama-3.1-8B-Instruct')
 
 def parse_args():
